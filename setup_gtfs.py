@@ -35,11 +35,11 @@ def download_gtfs(agency_name: str, url: str, download_dir: Path) -> Optional[Pa
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
 
-        print(f"    ✓ Saved to {zip_path}")
+        print(f"    \N{CHECK MARK} Saved to {zip_path}")
         return zip_path
 
     except requests.RequestException as e:
-        print(f"    ✗ Failed to download {agency_name}: {e}", file=sys.stderr)
+        print(f"    \N{BALLOT X} Failed to download {agency_name}: {e}", file=sys.stderr)
         return None
 
 
@@ -59,11 +59,11 @@ def extract_gtfs(agency_name: str, zip_path: Path, base_dir: Path) -> Optional[P
             zf.extractall(extract_dir)
 
         txt_files = list(extract_dir.glob("*.txt"))
-        print(f"    ✓ Extracted {len(txt_files)} .txt files to {extract_dir}")
+        print(f"    \N{CHECK MARK} Extracted {len(txt_files)} .txt files to {extract_dir}")
         return extract_dir
 
     except zipfile.BadZipFile as e:
-        print(f"    ✗ Bad zip file for {agency_name}: {e}", file=sys.stderr)
+        print(f"    \N{BALLOT X} Bad zip file for {agency_name}: {e}", file=sys.stderr)
         return None
 
 def build_sqlite(agency_name: str, extract_dir: Path) -> Optional[Path]:
@@ -71,7 +71,7 @@ def build_sqlite(agency_name: str, extract_dir: Path) -> Optional[Path]:
     txt_files = sorted(extract_dir.glob("*.txt"))
 
     if not txt_files:
-        print(f"    ✗ No .txt files found in {extract_dir}", file=sys.stderr)
+        print(f"    \N{BALLOT X} No .txt files found in {extract_dir}", file=sys.stderr)
         return None
 
     print(f"  Building SQLite database for {agency_name}...")
@@ -82,7 +82,7 @@ def build_sqlite(agency_name: str, extract_dir: Path) -> Optional[Path]:
         pd.read_csv(txt_file).to_sql(txt_file.stem, con=engine, index=False)
         table_count += 1
 
-    print(f"    ✓ Created {table_count} table(s) in {db_path}")
+    print(f"    \N{CHECK MARK} Created {table_count} table(s) in {db_path}")
     return db_path
 
 def cleanup_zips(download_dir: Path):
@@ -116,7 +116,7 @@ def main():
     print(f"\n{'=' * 60}")
     cleanup_zips(download_dir)
 
-    print("Done! ✓")
+    print("Done! \N{CHECK MARK}")
     print(f"\nData location: {Path(GTFS_DATA_DIR).resolve()}")
 
 if __name__ == "__main__":
