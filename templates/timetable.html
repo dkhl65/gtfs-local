@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}GTFS Timetable - {{ agency }} Route {{ route }}{% endblock %}
+
+{% block content %}
+<div class="timetable-header">
+    <div>
+        <h2 style="margin: 0 0 0.5rem 0;">{{ agency }} - Route {{ route }}</h2>
+        <p style="color: #666; margin: 0;">{{ direction }} on {{ date }}</p>
+    </div>
+    <div class="actions">
+        <a href="/" style="text-decoration: none;"><button class="secondary">← Back to Search</button></a>
+        <a href="/download?agency={{ agency_code }}&route={{ route_param }}&direction={{ direction_param }}&date={{ date_param }}" style="text-decoration: none;"><button>⬇ Download CSV</button></a>
+    </div>
+</div>
+
+<div class="timetable-info">
+    <p><strong>Agency:</strong> {{ agency }}</p>
+    <p><strong>Route:</strong> {{ route }}</p>
+    <p><strong>Direction:</strong> {{ direction }}</p>
+    <p><strong>Date:</strong> {{ date }}</p>
+</div>
+
+{% if headers and rows %}
+<table>
+    <thead>
+        <tr>
+            {% for header in headers %}
+            <th>{{ header }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            {% for cell in row %}
+            <td{% if cell == '↓' or cell == 'N/A' %} class="no-service"{% endif %}>{{ cell }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="actions" style="margin-top: 2rem; justify-content: center;">
+    <a href="/" style="text-decoration: none;"><button class="secondary">← New Search</button></a>
+    <a href="/download?agency={{ agency_code }}&route={{ route_param }}&direction={{ direction_param }}&date={{ date_param }}" style="text-decoration: none;"><button>⬇ Download CSV</button></a>
+</div>
+{% else %}
+<div class="error-message">
+    No timetable data found. Please try another route or date.
+</div>
+<div class="actions">
+    <a href="/" style="text-decoration: none;"><button class="secondary">← Back to Search</button></a>
+</div>
+{% endif %}
+{% endblock %}

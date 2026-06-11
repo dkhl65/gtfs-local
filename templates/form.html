@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}GTFS Timetable Viewer - Select Route{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px;">
+    <h2 style="margin-top: 0; color: #2c3e50;">Select a Route</h2>
+    <p style="color: #666; margin-bottom: 1.5rem;">Choose your transit agency, route, direction, and travel date to view the timetable.</p>
+
+    <form method="get" action="/timetable">
+        <div class="form-group">
+            <label for="agency">Transit Agency *</label>
+            <select id="agency" name="agency" required onchange="updateRoutes()">
+                <option value="">-- Select an agency --</option>
+                <option value="miway">Miway</option>
+                <option value="ttc">TTC</option>
+                <option value="gotransit">GO Transit</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="route">Route *</label>
+            <select id="route" name="route" required>
+                <option value="">-- Select a route --</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="direction">Direction *</label>
+            <select id="direction" name="direction" required>
+                <option value="">-- Select a direction --</option>
+                <option value="0">North/East</option>
+                <option value="1">South/West</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="date">Date *</label>
+            <input type="date" id="date" name="date" required value="{{ today }}">
+        </div>
+
+        <button type="submit">View Timetable</button>
+    </form>
+</div>
+
+<script>
+    // Route data from server (populated by Flask)
+    const routesByAgency = {
+        {% for agency_code, routes in routes_by_agency.items() %}
+        '{{ agency_code }}': [
+            {% for route in routes %}
+            { id: '{{ route.route_id }}', name: '{{ route.route_short_name }}' }{{ "," if not loop.last }}
+            {% endfor %}
+        ]{{ "," if not loop.last }}
+        {% endfor %}
+    };
+
+    function updateRoutes() {
+        const agency = document.getElementById('agency').value;
+        const routeSelect = document.getElementById('route');
+
+        // Clear current options
+        routeSelect.innerHTML = '<option value="">-- Select a route --</option>';
+
+        // Add routes for selected agency
+        if (agency && routesByAgency[agency]) {
+            routesByAgency[agency].forEach(route => {
+                const option = document.createElement('option');
+                option.value = route.id;
+                option.textContent = `Route ${route.name}`;
+                routeSelect.appendChild(option);
+            });
+        }
+    }
+</script>
+{% endblock %}
