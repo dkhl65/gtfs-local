@@ -21,36 +21,40 @@ def get_available_routes(agency_name: str):
 def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id: int):
     """Generate CSV-format timetable for a route on a specific date."""
     engine = get_db_engine(agency_name)
-    service_id = pd.read_sql_query(f"SELECT service_id FROM calendar_dates WHERE date = '{trip_date}'", con=engine)["service_id"]
 
-    route_query = "t.route_id = "
-    if isinstance(route_id, list):
-        for i, r in enumerate(route_id):
-            if i == 0:
-                route_query += str(r)
-            else:
-                route_query += f" OR t.route_id = {r}"
-    else:
-        route_query += str(route_id)
+    # Get service IDs for the given date using parameterized query
+    service_id_df = pd.read_sql_query(
+        "SELECT service_id FROM calendar_dates WHERE date = :date",
+        con=engine,
+        params={"date": trip_date}
+    )
+    service_ids = list(service_id_df["service_id"])
 
-    service_query = "t.service_id = "
-    for i, s in enumerate(list(service_id)):
-        if i == 0:
-            service_query += f"'{s}'"
-        else:
-            service_query += f" OR t.service_id = '{s}'"
+    # Normalize route_id to a list
+    route_ids = route_id if isinstance(route_id, list) else [route_id]
+
+    # Build named parameters for trip IDs query
+    route_placeholders = ",".join([f":route_id_{i}" for i in range(len(route_ids))])
+    service_placeholders = ",".join([f":service_id_{i}" for i in range(len(service_ids))])
+
+    params_trip_ids = {"direction_id": direction_id}
+    for i, rid in enumerate(route_ids):
+        params_trip_ids[f"route_id_{i}"] = rid
+    for i, sid in enumerate(service_ids):
+        params_trip_ids[f"service_id_{i}"] = sid
 
     trip_ids_df = pd.read_sql(
         f"""
             SELECT DISTINCT t.trip_id
             FROM trips AS t
             JOIN stop_times AS st ON t.trip_id = st.trip_id
-            WHERE ({route_query})
-            AND ({service_query})
-            AND t.direction_id = {direction_id}
+            WHERE t.route_id IN ({route_placeholders})
+            AND t.service_id IN ({service_placeholders})
+            AND t.direction_id = :direction_id
             ORDER BY st.arrival_time
         """,
-        con=engine
+        con=engine,
+        params=params_trip_ids
     )
     trip_ids = list(trip_ids_df["trip_id"])
 
@@ -70,12 +74,13 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
                     JOIN stop_times AS st ON t.trip_id = st.trip_id
                     JOIN stops AS s ON st.stop_id = s.stop_id
                     JOIN routes AS r ON t.route_id = r.route_id
-                    AND ({service_query})
-                    AND t.direction_id = {direction_id}
-                    AND t.trip_id = '{trip_id}'
+                    WHERE t.service_id IN ({service_placeholders})
+                    AND t.direction_id = :direction_id
+                    AND t.trip_id = :trip_id
                     ORDER BY st.stop_sequence, st.arrival_time
                 """,
-                con=engine
+                con=engine,
+                params={**params_trip_ids, "trip_id": trip_id}
             )
         )
 
