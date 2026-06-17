@@ -110,37 +110,38 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
     )
     trip_ids = list(trip_ids_df["trip_id"])
 
-    trips = []
-    for trip_id in trip_ids:
-        trips.append(
-            pd.read_sql(
-                f"""
-                    SELECT
-                        t.trip_id,
-                        t.trip_headsign,
-                        st.arrival_time,
-                        s.stop_name,
-                        s.stop_id,
-                        st.stop_sequence
-                    FROM trips AS t
-                    JOIN stop_times AS st ON t.trip_id = st.trip_id
-                    JOIN stops AS s ON st.stop_id = s.stop_id
-                    JOIN routes AS r ON t.route_id = r.route_id
-                    WHERE t.service_id IN ({service_placeholders})
-                    AND t.direction_id = :direction_id
-                    AND t.trip_id = :trip_id
-                    ORDER BY st.stop_sequence, st.arrival_time
-                """,
-                con=engine,
-                params={**params_trip_ids, "trip_id": trip_id}
-            )
-        )
+    trip_id_placeholders = ",".join([f":trip_id_{i}" for i in range(len(trip_ids))])
+    trip_id_params = {f"trip_id_{i}": tid for i, tid in enumerate(trip_ids)}
+    all_stops_df = pd.read_sql(
+        f"""
+            SELECT
+                t.trip_id,
+                t.trip_headsign,
+                st.arrival_time,
+                s.stop_name,
+                s.stop_id,
+                st.stop_sequence
+            FROM trips AS t
+            JOIN stop_times AS st ON t.trip_id = st.trip_id
+            JOIN stops AS s ON st.stop_id = s.stop_id
+            JOIN routes AS r ON t.route_id = r.route_id
+            WHERE t.service_id IN ({service_placeholders})
+            AND t.direction_id = :direction_id
+            AND t.trip_id IN ({trip_id_placeholders})
+            ORDER BY st.stop_sequence, st.arrival_time
+        """,
+        con=engine,
+        params={**params_trip_ids, **trip_id_params}
+    )
+    trips_by_id = {tid: group.reset_index(drop=True) for tid, group in all_stops_df.groupby("trip_id")}
+    trips = [trips_by_id[tid] for tid in trip_ids]
 
     stops = {}
     sequence = []
     csv_header = "Stop"
     for trip in trips:
         inserter = []
+        stop_occurrences = {}
         route_full_name = trip["trip_headsign"][0]
         direction_index = route_full_name.find(" ") + 1
         if route_full_name[direction_index] in ("N", "E", "W", "S"):
@@ -149,7 +150,10 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
             route_number = route_full_name[:direction_index - 1]
         csv_header += f",{route_number}"
         for _, row in trip.iterrows():
-            stop = f"{row['stop_id']} {row['stop_name']}" #{row['stop_sequence']}-
+            stop_base = f"{row['stop_id']} {row['stop_name']}"
+            stop_occurrences[stop_base] = stop_occurrences.get(stop_base, 0) + 1
+            occurrence = stop_occurrences[stop_base]
+            stop = f"{occurrence}|{stop_base}"
             if stop in stops:
                 stops[stop][row["trip_id"]] = row["arrival_time"][:5]
                 if len(inserter) > 0:
@@ -157,9 +161,9 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
                         k = sequence.index(stop)
                         sequence = sequence[:k] + inserter + sequence[k:]
                         inserter = []
-                    except:
-                        print("Duplicate stop, need to handle manually")
-                        return ""
+                    except ValueError:
+                        sequence = sequence + inserter
+                        inserter = []
             else:
                 stops[stop] = {row["trip_id"]: row["arrival_time"][:5]}
                 inserter.append(stop)
@@ -167,7 +171,8 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
     csv_string = csv_header + "\n"
 
     for stop in sequence:
-        csv_row = stop[stop.find(" ")+1:]
+        _, stop_label = stop.split("|", 1)
+        csv_row = stop_label[stop_label.find(" ")+1:]
         for trip_id in trip_ids:
             if trip_id in stops[stop]:
                 csv_row += f",{stops[stop][trip_id]}"

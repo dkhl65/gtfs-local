@@ -14,10 +14,19 @@ function updateRoutes(routesByAgency) {
     routeSelect.innerHTML = '<option value="">-- Select a route --</option>';
 
     if (agency && routesByAgency[agency]) {
-        routesByAgency[agency].forEach(route => {
+        const agencyRoutes = routesByAgency[agency];
+        const shortNames = agencyRoutes.map(route => String(route.route_short_name ?? route.route_short_names ?? "").trim());
+        const allShortNamesPresent = shortNames.every(shortName => shortName.length > 0);
+        const shortNamesAreUnique = new Set(shortNames).size === shortNames.length;
+        const useShortName = allShortNamesPresent && shortNamesAreUnique;
+
+        agencyRoutes.forEach(route => {
+            const labelId = useShortName
+                ? route.route_short_name
+                : route.route_id;
             const option = document.createElement("option");
             option.value = route.route_id;
-            option.textContent = `${route.route_id} - ${route.route_long_name}`;
+            option.textContent = `${labelId} - ${route.route_long_name}`;
             routeSelect.appendChild(option);
         });
     }
