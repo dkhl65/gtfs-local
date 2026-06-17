@@ -4,6 +4,10 @@ import pandas as pd
 import sys
 from pathlib import Path
 
+def normalize_route_ids(route_id):
+    """Normalize route input to a list of route ids."""
+    return route_id if isinstance(route_id, list) else [route_id]
+
 def get_db_engine(agency_name: str):
     """Get SQLAlchemy engine for a specific transit agency."""
     agency_name = agency_name.lower()
@@ -15,14 +19,65 @@ def get_db_engine(agency_name: str):
 def get_available_routes(agency_name: str):
     """Get list of available routes for an agency."""
     engine = get_db_engine(agency_name)
-    routes_df = pd.read_sql("SELECT DISTINCT route_id, route_short_name, route_long_name FROM routes ORDER BY CAST(route_short_name AS INTEGER)", con=engine)
+    routes_df = pd.read_sql(
+        """
+            SELECT DISTINCT
+                route_id,
+                route_short_name,
+                route_long_name
+            FROM routes
+            ORDER BY CAST(route_short_name AS INTEGER)
+        """,
+        con=engine
+    )
     return routes_df.to_dict("records")
+
+def get_direction_labels(agency_name: str, route_id):
+    """Build route-aware direction labels from trip headsigns."""
+    engine = get_db_engine(agency_name)
+    route_ids = normalize_route_ids(route_id)
+
+    route_placeholders = ",".join([f":route_id_{i}" for i in range(len(route_ids))])
+    params = {f"route_id_{i}": rid for i, rid in enumerate(route_ids)}
+
+    labels_df = pd.read_sql_query(
+        f"""
+            SELECT
+                direction_id,
+                trip_headsign,
+                COUNT(*) AS trip_count
+            FROM trips
+            WHERE route_id IN ({route_placeholders})
+            AND direction_id IN (0, 1)
+            AND trip_headsign IS NOT NULL
+            AND TRIM(trip_headsign) <> ''
+            GROUP BY direction_id, trip_headsign
+            ORDER BY direction_id, trip_count DESC, trip_headsign
+        """,
+        con=engine,
+        params=params
+    )
+
+    labels = {}
+    for direction_id in (0, 1):
+        headsigns = labels_df[labels_df["direction_id"] == direction_id]["trip_headsign"].tolist()
+
+        if not headsigns:
+            labels[direction_id] = f"Direction {direction_id}"
+            continue
+
+        if len(headsigns) == 1:
+            labels[direction_id] = headsigns[0]
+            continue
+
+        labels[direction_id] = f"{headsigns[0]} (+{len(headsigns) - 1} variants)"
+
+    return labels
 
 def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id: int):
     """Generate CSV-format timetable for a route on a specific date."""
     engine = get_db_engine(agency_name)
 
-    # Get service IDs for the given date using parameterized query
     service_id_df = pd.read_sql_query(
         "SELECT service_id FROM calendar_dates WHERE date = :date",
         con=engine,
@@ -30,10 +85,7 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
     )
     service_ids = list(service_id_df["service_id"])
 
-    # Normalize route_id to a list
-    route_ids = route_id if isinstance(route_id, list) else [route_id]
-
-    # Build named parameters for trip IDs query
+    route_ids = normalize_route_ids(route_id)
     route_placeholders = ",".join([f":route_id_{i}" for i in range(len(route_ids))])
     service_placeholders = ",".join([f":service_id_{i}" for i in range(len(service_ids))])
 
@@ -129,12 +181,12 @@ if __name__ == "__main__":
     agency_name = "miway"
     trip_date = datetime.now().strftime("%Y%m%d")
     route_id = 4
-    direction_id = 0 # E/N 0, W/S 1
+    direction_id = 0
 
     if len(sys.argv) > 1:
         agency_name = str(sys.argv[1]).lower()
         trip_date = str(sys.argv[2])
-        route_id = str(sys.argv[3]).split(',')
+        route_id = str(sys.argv[3]).split(",")
         direction_input = str(sys.argv[4])
         if direction_input in ["e", "E", "n", "N", "0"]:
             direction_id = 0

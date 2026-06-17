@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, jsonify
 from datetime import datetime
 import io
-from output import generate_timetable, get_available_routes
+from output import generate_timetable, get_available_routes, get_direction_labels
 
 app = Flask(__name__)
 
@@ -11,10 +11,23 @@ AGENCIES = {
     "gotransit": "GO Transit"
 }
 
-DIRECTIONS = {
-    0: "North/East",
-    1: "South/West"
+DEFAULT_DIRECTIONS = {
+    0: "Direction 0",
+    1: "Direction 1"
 }
+
+def get_direction_label_for_display(agency, route, direction_id):
+    """Get route-aware direction text for rendered timetable pages."""
+    route_id = parse_route_ids(route)
+    direction_labels = get_direction_labels(agency, route_id)
+    return direction_labels.get(direction_id, f"Direction {direction_id}")
+
+def parse_route_ids(route_value):
+    """Parse route query param into a string or list of strings."""
+    route_ids = [r.strip() for r in route_value.split(",") if r.strip()]
+    if len(route_ids) == 1:
+        return route_ids[0]
+    return route_ids
 
 def parse_csv_to_table(csv_string):
     """Convert CSV string to table data (list of dicts)."""
@@ -29,28 +42,58 @@ def parse_csv_to_table(csv_string):
 
     return headers, rows
 
+def load_routes_by_agency():
+    """Load routes for each configured agency."""
+    routes_by_agency = {}
+    for agency_code in AGENCIES:
+        try:
+            routes_by_agency[agency_code] = get_available_routes(agency_code)
+        except Exception:
+            routes_by_agency[agency_code] = []
+    return routes_by_agency
+
+def render_form(error=None, status_code=200):
+    """Render the search form with required context."""
+    response = render_template(
+        "form.html",
+        agencies=AGENCIES,
+        routes_by_agency=load_routes_by_agency(),
+        today=datetime.now().strftime("%Y-%m-%d"),
+        error=error
+    )
+    if status_code == 200:
+        return response
+    return response, status_code
+
 @app.route("/")
 def index():
     """Show the form to select agency, route, direction, and date."""
-    routes_by_agency = {}
-    try:
-        for agency_code in AGENCIES.keys():
-            try:
-                routes = get_available_routes(agency_code)
-                routes_by_agency[agency_code] = routes
-            except Exception as e:
-                routes_by_agency[agency_code] = []
-    except Exception as e:
-        pass
+    return render_form()
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    return render_template(
-        "form.html",
-        agencies=AGENCIES,
-        routes_by_agency=routes_by_agency,
-        directions=DIRECTIONS,
-        today=today
-    )
+@app.route("/direction-options")
+def direction_options():
+    """Return route-aware direction labels for the selected agency and route(s)."""
+    agency = request.args.get("agency", "").lower()
+    route = request.args.get("route", "")
+
+    if not agency or not route:
+        return jsonify({"options": [
+            {"value": "0", "label": DEFAULT_DIRECTIONS[0]},
+            {"value": "1", "label": DEFAULT_DIRECTIONS[1]}
+        ]})
+
+    try:
+        route_id = parse_route_ids(route)
+        direction_labels = get_direction_labels(agency, route_id)
+        return jsonify({"options": [
+            {"value": "0", "label": direction_labels.get(0, DEFAULT_DIRECTIONS[0])},
+            {"value": "1", "label": direction_labels.get(1, DEFAULT_DIRECTIONS[1])}
+        ]})
+    except Exception:
+        return jsonify({"options": [
+            {"value": "0", "label": DEFAULT_DIRECTIONS[0]},
+            {"value": "1", "label": DEFAULT_DIRECTIONS[1]}
+        ]})
 
 @app.route("/timetable")
 def timetable():
@@ -61,28 +104,21 @@ def timetable():
     date_str = request.args.get("date", "")
 
     if not all([agency, route, direction, date_str]):
-        return render_template(
-            "form.html",
-            agencies=AGENCIES,
-            error="Please select all fields"
-        ), 400
+        return render_form(error="Please select all fields", status_code=400)
 
     try:
         trip_date = date_str.replace("-", "")
         direction_id = int(direction)
 
-        route_id = [int(r.strip()) for r in route.split(",")]
-        if len(route_id) == 1:
-            route_id = route_id[0]
+        route_id = parse_route_ids(route)
 
         csv_string = generate_timetable(agency, trip_date, route_id, direction_id)
 
         if not csv_string:
-            return render_template(
-                "form.html",
-                agencies=AGENCIES,
-                error=f"No timetable data found for {AGENCIES[agency]} route {route} on {date_str}"
-            ), 400
+            return render_form(
+                error=f"No timetable data found for {AGENCIES[agency]} route {route} on {date_str}",
+                status_code=400
+            )
 
         headers, rows = parse_csv_to_table(csv_string)
 
@@ -90,7 +126,7 @@ def timetable():
             "timetable.html",
             agency=AGENCIES.get(agency, agency),
             route=route,
-            direction=DIRECTIONS.get(direction_id, direction),
+            direction=get_direction_label_for_display(agency, route, direction_id),
             date=date_str,
             headers=headers,
             rows=rows,
@@ -101,11 +137,7 @@ def timetable():
         )
 
     except Exception as e:
-        return render_template(
-            "form.html",
-            agencies=AGENCIES,
-            error=f"Error generating timetable: {str(e)}"
-        ), 500
+        return render_form(error=f"Error generating timetable: {str(e)}", status_code=500)
 
 @app.route("/download")
 def download():
@@ -121,16 +153,14 @@ def download():
     try:
         trip_date = date_str.replace("-", "")
         direction_id = int(direction)
-        route_id = [int(r.strip()) for r in route.split(",")]
-        if len(route_id) == 1:
-            route_id = route_id[0]
+        route_id = parse_route_ids(route)
 
         csv_string = generate_timetable(agency, trip_date, route_id, direction_id)
         filename = f"{agency}_{route}_{direction}_{date_str.replace('-', '')}.csv"
 
         return send_file(
             io.BytesIO(csv_string.encode()),
-            mimetype='text/csv',
+            mimetype="text/csv",
             as_attachment=True,
             download_name=filename
         )
