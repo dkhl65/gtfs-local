@@ -120,7 +120,7 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
             if trip_id in stops[stop]:
                 csv_row += f",{stops[stop][trip_id]}"
             else:
-                csv_row += ",\u2193"
+                csv_row += ",\N{DOWNWARDS ARROW}"
         csv_string += csv_row + "\n"
 
     return csv_string
