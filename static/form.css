@@ -1,0 +1,13 @@
+.form-container {
+    max-width: 600px;
+}
+
+.select-route-title {
+    margin-top: 0;
+    color: #2c3e50;
+}
+
+.select-route-subtitle {
+    color: #666;
+    margin-bottom: 1.5rem;
+}

@@ -3,14 +3,16 @@
 {% block title %}GTFS Timetable Viewer - Select Route{% endblock %}
 
 {% block content %}
-<div style="max-width: 600px;">
-    <h2 style="margin-top: 0; color: #2c3e50;">Select a Route</h2>
-    <p style="color: #666; margin-bottom: 1.5rem;">Choose your transit agency, route, direction, and travel date to view the timetable.</p>
+<link rel="stylesheet" href="{{ url_for('static', filename='form.css') }}">
+
+<div class="form-container">
+    <h2 class="select-route-title">Select a Route</h2>
+    <p class="select-route-subtitle">Choose your transit agency, route, direction, and travel date to view the timetable.</p>
 
     <form method="get" action="/timetable">
         <div class="form-group">
             <label for="agency">Transit Agency *</label>
-            <select id="agency" name="agency" required onchange="updateRoutes()">
+            <select id="agency" name="agency" required data-routes='{{ routes_by_agency | tojson }}'>
                 <option value="">-- Select an agency --</option>
                 <option value="miway">Miway</option>
                 <option value="ttc">TTC</option>
@@ -43,34 +45,8 @@
     </form>
 </div>
 
-<script>
-    // Route data from server (populated by Flask)
-    const routesByAgency = {
-        {% for agency_code, routes in routes_by_agency.items() %}
-        '{{ agency_code }}': [
-            {% for route in routes %}
-            { id: '{{ route.route_id }}', name: '{{ route.route_short_name }}' }{{ "," if not loop.last }}
-            {% endfor %}
-        ]{{ "," if not loop.last }}
-        {% endfor %}
-    };
+{% endblock %}
 
-    function updateRoutes() {
-        const agency = document.getElementById('agency').value;
-        const routeSelect = document.getElementById('route');
-
-        // Clear current options
-        routeSelect.innerHTML = '<option value="">-- Select a route --</option>';
-
-        // Add routes for selected agency
-        if (agency && routesByAgency[agency]) {
-            routesByAgency[agency].forEach(route => {
-                const option = document.createElement('option');
-                option.value = route.id;
-                option.textContent = `Route ${route.name}`;
-                routeSelect.appendChild(option);
-            });
-        }
-    }
-</script>
+{% block scripts %}
+<script src="{{ url_for('static', filename='form.js') }}"></script>
 {% endblock %}

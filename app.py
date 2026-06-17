@@ -1,8 +1,7 @@
 from flask import Flask, render_template, request, send_file
 from datetime import datetime
 import io
-from output import generate_timetable, get_available_routes, get_db_engine
-import pandas as pd
+from output import generate_timetable, get_available_routes
 
 app = Flask(__name__)
 
@@ -45,11 +44,13 @@ def index():
         pass
 
     today = datetime.now().strftime("%Y-%m-%d")
-    return render_template("form.html",
-                         agencies=AGENCIES,
-                         routes_by_agency=routes_by_agency,
-                         directions=DIRECTIONS,
-                         today=today)
+    return render_template(
+        "form.html",
+        agencies=AGENCIES,
+        routes_by_agency=routes_by_agency,
+        directions=DIRECTIONS,
+        today=today
+    )
 
 @app.route("/timetable")
 def timetable():
@@ -60,16 +61,16 @@ def timetable():
     date_str = request.args.get("date", "")
 
     if not all([agency, route, direction, date_str]):
-        return render_template("form.html",
-                             agencies=AGENCIES,
-                             error="Please select all fields"),400
+        return render_template(
+            "form.html",
+            agencies=AGENCIES,
+            error="Please select all fields"
+        ), 400
 
     try:
-        # Convert date format from YYYY-MM-DD to YYYYMMDD
         trip_date = date_str.replace("-", "")
         direction_id = int(direction)
 
-        # Parse route (could be comma-separated)
         route_id = [int(r.strip()) for r in route.split(",")]
         if len(route_id) == 1:
             route_id = route_id[0]
@@ -77,28 +78,34 @@ def timetable():
         csv_string = generate_timetable(agency, trip_date, route_id, direction_id)
 
         if not csv_string:
-            return render_template("form.html",
-                                 agencies=AGENCIES,
-                                 error=f"No timetable data found for {AGENCIES[agency]} route {route} on {date_str}"), 400
+            return render_template(
+                "form.html",
+                agencies=AGENCIES,
+                error=f"No timetable data found for {AGENCIES[agency]} route {route} on {date_str}"
+            ), 400
 
         headers, rows = parse_csv_to_table(csv_string)
 
-        return render_template("timetable.html",
-                             agency=AGENCIES.get(agency, agency),
-                             route=route,
-                             direction=DIRECTIONS.get(direction_id, direction),
-                             date=date_str,
-                             headers=headers,
-                             rows=rows,
-                             agency_code=agency,
-                             route_param=route,
-                             direction_param=direction,
-                             date_param=date_str)
+        return render_template(
+            "timetable.html",
+            agency=AGENCIES.get(agency, agency),
+            route=route,
+            direction=DIRECTIONS.get(direction_id, direction),
+            date=date_str,
+            headers=headers,
+            rows=rows,
+            agency_code=agency,
+            route_param=route,
+            direction_param=direction,
+            date_param=date_str
+        )
 
     except Exception as e:
-        return render_template("form.html",
-                             agencies=AGENCIES,
-                             error=f"Error generating timetable: {str(e)}"), 500
+        return render_template(
+            "form.html",
+            agencies=AGENCIES,
+            error=f"Error generating timetable: {str(e)}"
+        ), 500
 
 @app.route("/download")
 def download():
@@ -119,11 +126,6 @@ def download():
             route_id = route_id[0]
 
         csv_string = generate_timetable(agency, trip_date, route_id, direction_id)
-
-        # Create file-like object
-        csv_buffer = io.StringIO(csv_string)
-
-        # Format filename
         filename = f"{agency}_{route}_{direction}_{date_str.replace('-', '')}.csv"
 
         return send_file(

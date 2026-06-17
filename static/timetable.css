@@ -1,0 +1,17 @@
+.route-title {
+    margin: 0 0 0.5rem 0;
+}
+
+.route-subtitle {
+    color: #666;
+    margin: 0;
+}
+
+.button-link {
+    text-decoration: none;
+}
+
+.new-search-div {
+    margin-top: 2rem;
+    justify-content: center;
+}
