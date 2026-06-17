@@ -15,8 +15,8 @@ def get_db_engine(agency_name: str):
 def get_available_routes(agency_name: str):
     """Get list of available routes for an agency."""
     engine = get_db_engine(agency_name)
-    routes_df = pd.read_sql("SELECT DISTINCT route_id, route_short_name FROM routes ORDER BY CAST(route_short_name AS INTEGER)", con=engine)
-    return routes_df.to_dict('records')
+    routes_df = pd.read_sql("SELECT DISTINCT route_id, route_short_name, route_long_name FROM routes ORDER BY CAST(route_short_name AS INTEGER)", con=engine)
+    return routes_df.to_dict("records")
 
 def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id: int):
     """Generate CSV-format timetable for a route on a specific date."""
@@ -136,7 +136,7 @@ if __name__ == "__main__":
         trip_date = str(sys.argv[2])
         route_id = str(sys.argv[3]).split(',')
         direction_input = str(sys.argv[4])
-        if direction_input in ['e', 'E', 'n', 'N', '0']:
+        if direction_input in ["e", "E", "n", "N", "0"]:
             direction_id = 0
         else:
             direction_id = 1

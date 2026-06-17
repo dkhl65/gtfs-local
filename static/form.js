@@ -8,7 +8,7 @@ function updateRoutes(routesByAgency) {
         routesByAgency[agency].forEach(route => {
             const option = document.createElement("option");
             option.value = route.route_id;
-            option.textContent = `Route ${route.route_short_name}`;
+            option.textContent = `${route.route_id} - ${route.route_long_name}`;
             routeSelect.appendChild(option);
         });
     }
