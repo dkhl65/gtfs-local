@@ -1,7 +1,12 @@
 from flask import Flask, render_template, request, send_file, jsonify
 import datetime as dt
 import io
-from output import generate_timetable, get_available_routes, get_direction_labels
+from output import (
+    generate_timetable,
+    get_available_routes,
+    get_direction_labels,
+    get_available_directions,
+)
 
 app = Flask(__name__)
 
@@ -84,10 +89,17 @@ def direction_options():
 
     try:
         route_id = parse_route_ids(route)
+        available_directions = get_available_directions(agency, route_id)
+        if not available_directions:
+            available_directions = [0, 1]
+
         direction_labels = get_direction_labels(agency, route_id)
         return jsonify({"options": [
-            {"value": "0", "label": direction_labels.get(0, DEFAULT_DIRECTIONS[0])},
-            {"value": "1", "label": direction_labels.get(1, DEFAULT_DIRECTIONS[1])}
+            {
+                "value": str(direction_id),
+                "label": direction_labels.get(direction_id, DEFAULT_DIRECTIONS[direction_id])
+            }
+            for direction_id in available_directions
         ]})
     except Exception:
         return jsonify({"options": [
@@ -111,6 +123,15 @@ def timetable():
         direction_id = int(direction)
 
         route_id = parse_route_ids(route)
+        available_directions = get_available_directions(agency, route_id)
+        if not available_directions:
+            available_directions = [0, 1]
+
+        if direction_id not in available_directions:
+            return render_form(
+                error=f"Direction {direction_id} is not available for {AGENCIES[agency]} route {route}",
+                status_code=400
+            )
 
         csv_string = generate_timetable(agency, trip_date, route_id, direction_id)
 
@@ -122,8 +143,12 @@ def timetable():
 
         headers, rows = parse_csv_to_table(csv_string)
 
-        switch_direction_id = 1 - direction_id if direction_id in (0, 1) else direction_id
-        switch_direction_label = get_direction_label_for_display(agency, route, switch_direction_id)
+        show_switch_direction = len(available_directions) > 1
+        switch_direction_id = None
+        switch_direction_label = None
+        if show_switch_direction:
+            switch_direction_id = next(d for d in available_directions if d != direction_id)
+            switch_direction_label = get_direction_label_for_display(agency, route, switch_direction_id)
 
         date_obj = dt.datetime.strptime(date_str, "%Y-%m-%d")
         date_full = date_obj.strftime("%A, %B %d, %Y")
@@ -139,7 +164,8 @@ def timetable():
             agency_code=agency,
             route_param=route,
             direction_param=direction,
-            switch_direction_param=str(switch_direction_id),
+            show_switch_direction=show_switch_direction,
+            switch_direction_param=str(switch_direction_id) if switch_direction_id is not None else "",
             switch_direction_label=switch_direction_label,
             date_param=date_str
         )

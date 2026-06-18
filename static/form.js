@@ -47,15 +47,29 @@ async function updateDirectionOptions() {
     try {
         const response = await fetch(`/direction-options?agency=${encodeURIComponent(agency)}&route=${encodeURIComponent(route)}`);
         const data = await response.json();
+        const options = Array.isArray(data.options) ? data.options : [];
 
-        directionSelect.innerHTML = '<option value="">-- Select a direction --</option>';
+        if (options.length === 0) {
+            resetDirectionOptions();
+            return;
+        }
 
-        data.options.forEach(optionData => {
+        directionSelect.innerHTML = "";
+
+        if (options.length > 1) {
+            directionSelect.innerHTML = '<option value="">-- Select a direction --</option>';
+        }
+
+        options.forEach(optionData => {
             const option = document.createElement("option");
             option.value = optionData.value;
             option.textContent = optionData.label;
             directionSelect.appendChild(option);
         });
+
+        if (options.length === 1) {
+            directionSelect.value = options[0].value;
+        }
     } catch (_error) {
         resetDirectionOptions();
     }

@@ -74,6 +74,28 @@ def get_direction_labels(agency_name: str, route_id):
 
     return labels
 
+def get_available_directions(agency_name: str, route_id):
+    """Return available direction ids for one or more route ids."""
+    engine = get_db_engine(agency_name)
+    route_ids = normalize_route_ids(route_id)
+
+    route_placeholders = ",".join([f":route_id_{i}" for i in range(len(route_ids))])
+    params = {f"route_id_{i}": rid for i, rid in enumerate(route_ids)}
+
+    directions_df = pd.read_sql_query(
+        f"""
+            SELECT DISTINCT direction_id
+            FROM trips
+            WHERE route_id IN ({route_placeholders})
+            AND direction_id IN (0, 1)
+            ORDER BY direction_id
+        """,
+        con=engine,
+        params=params
+    )
+
+    return directions_df["direction_id"].astype(int).tolist()
+
 def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id: int):
     """Generate CSV-format timetable for a route on a specific date."""
     engine = get_db_engine(agency_name)

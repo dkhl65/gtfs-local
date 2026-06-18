@@ -13,12 +13,14 @@
         </div>
         <div class="actions">
             <a href="/" class="button-link"><button class="secondary">&LeftArrow; Back to Search</button></a>
+            {% if show_switch_direction %}
             <a
                 href="/timetable?agency={{ agency_code }}&route={{ route_param }}&direction={{ switch_direction_param }}&date={{ date_param }}"
                 class="button-link"
             >
                 <button>Switch Direction</button>
             </a>
+            {% endif %}
             <a
                 href="/download?agency={{ agency_code }}&route={{ route_param }}&direction={{ direction_param }}&date={{ date_param }}"
                 class="button-link"
@@ -26,13 +28,6 @@
                 <button>&DownArrowBar; Download CSV</button>
             </a>
         </div>
-    </div>
-
-    <div class="timetable-info">
-        <p><strong>Agency:</strong> {{ agency }}</p>
-        <p><strong>Route:</strong> {{ route }}</p>
-        <p><strong>Direction:</strong> {{ direction }}</p>
-        <p><strong>Date:</strong> {{ date }}</p>
     </div>
 </div>
 
