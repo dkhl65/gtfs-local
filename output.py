@@ -165,7 +165,6 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
             FROM trips AS t
             JOIN stop_times AS st ON t.trip_id = st.trip_id
             JOIN stops AS s ON st.stop_id = s.stop_id
-            JOIN routes AS r ON t.route_id = r.route_id
             WHERE t.service_id IN ({service_placeholders})
             AND t.direction_id = :direction_id
             AND t.trip_id IN ({trip_id_placeholders})
