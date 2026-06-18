@@ -11,7 +11,7 @@ from output import (
 app = Flask(__name__)
 
 AGENCIES = {
-    "miway": "Miway",
+    "miway": "MiWay",
     "ttc": "TTC",
     "gotransit": "GO Transit"
 }

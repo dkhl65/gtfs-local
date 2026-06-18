@@ -1,5 +1,5 @@
-from sqlalchemy import create_engine
-from datetime import datetime
+from sqlalchemy import create_engine, inspect
+import datetime as dt
 import pandas as pd
 import sys
 from pathlib import Path
@@ -96,16 +96,35 @@ def get_available_directions(agency_name: str, route_id):
 
     return directions_df["direction_id"].astype(int).tolist()
 
+def table_exists(engine, table_name):
+    """Check if a table exists in the database."""
+    inspector = inspect(engine)
+    return table_name in inspector.get_table_names()
+
 def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id: int):
     """Generate CSV-format timetable for a route on a specific date."""
     engine = get_db_engine(agency_name)
 
-    service_id_df = pd.read_sql_query(
-        "SELECT service_id FROM calendar_dates WHERE date = :date",
+    service_id_df1 = pd.DataFrame(columns=["service_id"])
+    if table_exists(engine, "calendar"):
+        no_service_id_df = pd.read_sql_query(
+            "SELECT service_id FROM calendar_dates WHERE exception_type = 2 AND date = :date",
+            con=engine,
+            params={"date": trip_date}
+        )
+        if trip_date not in no_service_id_df["service_id"].values:
+            day_of_week = dt.datetime.strptime(trip_date, "%Y%m%d").strftime("%A").lower()
+            service_id_df1 = pd.read_sql_query(
+                f"SELECT service_id FROM calendar WHERE {day_of_week} = 1 AND start_date <= :date AND end_date >= :date",
+                con=engine,
+                params={"date": trip_date}
+            )
+    service_id_df2 = pd.read_sql_query(
+        "SELECT service_id FROM calendar_dates WHERE date = :date AND exception_type = 1",
         con=engine,
         params={"date": trip_date}
     )
-    service_ids = list(service_id_df["service_id"])
+    service_ids = list(service_id_df1["service_id"]) + list(service_id_df2["service_id"])
 
     route_ids = normalize_route_ids(route_id)
     route_placeholders = ",".join([f":route_id_{i}" for i in range(len(route_ids))])
@@ -164,9 +183,13 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
     for trip in trips:
         inserter = []
         stop_occurrences = {}
-        route_full_name = trip["trip_headsign"][0]
+        route_split_name = trip["trip_headsign"][0].split(" - ", 1)
+        if len(route_split_name) >= 2 and route_split_name[0].strip() in ("North", "East", "West", "South"):
+            route_full_name = route_split_name[1].strip()
+        else:
+            route_full_name = trip["trip_headsign"][0].strip()
         direction_index = route_full_name.find(" ") + 1
-        if route_full_name[direction_index] in ("N", "E", "W", "S"):
+        if route_full_name[direction_index:direction_index + 2] in ("N ", "E ", "W ", "S "):
             route_number = route_full_name[:direction_index + 1]
         else:
             route_number = route_full_name[:direction_index - 1]
@@ -206,7 +229,7 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
 
 if __name__ == "__main__":
     agency_name = "miway"
-    trip_date = datetime.now().strftime("%Y%m%d")
+    trip_date = dt.datetime.now().strftime("%Y%m%d")
     route_id = 4
     direction_id = 0
 
