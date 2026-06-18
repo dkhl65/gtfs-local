@@ -1,5 +1,10 @@
 .form-container {
-    max-width: 600px;
+    max-width: 1200px;
+    margin: auto;
+}
+
+.form-group {
+    max-width: 800px;
 }
 
 .select-route-title {

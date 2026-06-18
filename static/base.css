@@ -19,7 +19,8 @@ header {
 
 header h1 {
     font-size: 1.8rem;
-    margin: 0;
+    margin: auto;
+    max-width: 1200px;
 }
 
 .container {
@@ -34,6 +35,8 @@ header h1 {
     padding: 1rem;
     border-radius: 4px;
     margin-bottom: 1rem;
+    max-width: 1200px;
+    margin: auto;
 }
 
 .success-message {
@@ -93,78 +96,6 @@ button.secondary {
 
 button.secondary:hover {
     background-color: #7f8c8d;
-}
-
-.timetable-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-.timetable-info {
-    background-color: white;
-    padding: 1rem;
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    margin-bottom: 1rem;
-}
-
-.timetable-info h2 {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-    color: #2c3e50;
-}
-
-.timetable-info p {
-    color: #666;
-    margin: 0.25rem 0;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    background-color: white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-thead {
-    background-color: #34495e;
-    color: white;
-}
-
-th {
-    padding: 1rem;
-    text-align: left;
-    font-weight: 600;
-    border-bottom: 2px solid #2c3e50;
-}
-
-td {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid #ecf0f1;
-    min-width: 80px;
-}
-
-tbody tr:hover {
-    background-color: #f8f9fa;
-}
-
-tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.no-service {
-    color: #e74c3c;
-    font-weight: 500;
-}
-
-.actions {
-    margin-top: 1.5rem;
-    display: flex;
-    gap: 1rem;
 }
 
 .form-row {

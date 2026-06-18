@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, send_file, jsonify
-from datetime import datetime
+import datetime as dt
 import io
 from output import generate_timetable, get_available_routes, get_direction_labels
 
@@ -58,7 +58,7 @@ def render_form(error=None, status_code=200):
         "form.html",
         agencies=AGENCIES,
         routes_by_agency=load_routes_by_agency(),
-        today=datetime.now().strftime("%Y-%m-%d"),
+        today=dt.datetime.now().strftime("%Y-%m-%d"),
         error=error
     )
     if status_code == 200:
@@ -122,17 +122,25 @@ def timetable():
 
         headers, rows = parse_csv_to_table(csv_string)
 
+        switch_direction_id = 1 - direction_id if direction_id in (0, 1) else direction_id
+        switch_direction_label = get_direction_label_for_display(agency, route, switch_direction_id)
+
+        date_obj = dt.datetime.strptime(date_str, "%Y-%m-%d")
+        date_full = date_obj.strftime("%A, %B %d, %Y")
+
         return render_template(
             "timetable.html",
             agency=AGENCIES.get(agency, agency),
             route=route,
             direction=get_direction_label_for_display(agency, route, direction_id),
-            date=date_str,
+            date=date_full,
             headers=headers,
             rows=rows,
             agency_code=agency,
             route_param=route,
             direction_param=direction,
+            switch_direction_param=str(switch_direction_id),
+            switch_direction_label=switch_direction_label,
             date_param=date_str
         )
 
