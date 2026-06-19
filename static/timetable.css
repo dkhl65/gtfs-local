@@ -59,7 +59,7 @@ table {
     max-height: 100vh;
     max-width: 100vw;
     overflow: auto;
-    margin: auto;
+    margin: 1rem auto;
 }
 
 thead {
@@ -99,8 +99,46 @@ tbody tr:last-child td {
     gap: 1rem;
 }
 
-table {
+.timetable-filters {
+    margin-top: 1rem;
+}
 
+.timetable-filters.is-hidden {
+    display: none;
+}
+
+.time-input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.time-input-group input {
+    width: 5.25rem;
+}
+
+.time-input-group span {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.filter-actions-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.checkbox-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0;
+}
+
+.checkbox-inline input {
+    width: auto;
+    padding: 0;
 }
 
 thead {

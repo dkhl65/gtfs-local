@@ -21,6 +21,8 @@ DEFAULT_DIRECTIONS = {
     1: "Direction 1"
 }
 
+NO_SERVICE_MARKERS = {"\u2193", "N/A", ""}
+
 def get_direction_label_for_display(agency, route, direction_id):
     """Get route-aware direction text for rendered timetable pages."""
     route_id = parse_route_ids(route)
@@ -46,6 +48,171 @@ def parse_csv_to_table(csv_string):
         rows.append(line.split(","))
 
     return headers, rows
+
+def parse_time_to_minutes(value):
+    """Parse HH:MM (including >24h) to minutes from midnight."""
+    if not value:
+        return None
+
+    raw = value.strip()
+    if raw in NO_SERVICE_MARKERS:
+        return None
+
+    parts = raw.split(":")
+    if len(parts) != 2:
+        return None
+
+    try:
+        hours = int(parts[0])
+        minutes = int(parts[1])
+    except ValueError:
+        return None
+
+    if hours < 0 or minutes < 0 or minutes > 59:
+        return None
+
+    return (hours * 60) + minutes
+
+def normalize_trip_times(departure, arrival):
+    """Normalize trip times across midnight to ensure arrival >= departure."""
+    dep = departure
+    arr = arrival
+    while arr < dep:
+        arr += 24 * 60
+    return dep, arr
+
+def pick_trip_time(rows, col_index, row_start, row_end, pick_earliest):
+    """Find first/last non-empty time in a row span for a trip column."""
+    row_range = list(range(row_start, row_end + 1))
+    indices = row_range if pick_earliest else list(reversed(row_range))
+
+    for row_idx in indices:
+        minute_value = parse_time_to_minutes(rows[row_idx][col_index + 1])
+        if minute_value is not None:
+            return minute_value
+    return None
+
+def apply_download_filters(headers, rows, request_args):
+    """Apply the same stop/time filters used on the timetable page to CSV data."""
+    if not headers or not rows:
+        return headers, rows
+
+    trip_column_count = max(0, len(headers) - 1)
+    if trip_column_count == 0:
+        return headers, rows
+
+    def parse_index_arg(name):
+        raw = request_args.get(name)
+        if raw is None or raw == "":
+            return None
+        try:
+            parsed = int(raw)
+        except ValueError:
+            return None
+        return parsed if 0 <= parsed < len(rows) else None
+
+    start_index = parse_index_arg("start_index")
+    end_index = parse_index_arg("end_index")
+
+    all_minutes = []
+    for row in rows:
+        for cell in row[1:]:
+            minute = parse_time_to_minutes(cell)
+            if minute is not None:
+                all_minutes.append(minute)
+
+    min_time = min(all_minutes) if all_minutes else 0
+    max_time = max(all_minutes) if all_minutes else (24 * 60) - 1
+
+    start_minutes = parse_time_to_minutes(request_args.get("start_time"))
+    if start_minutes is None:
+        start_minutes = min_time
+
+    end_minutes = parse_time_to_minutes(request_args.get("end_time"))
+    if end_minutes is None:
+        end_minutes = max_time
+
+    if start_minutes > end_minutes:
+        start_minutes = end_minutes
+
+    omit_intermediate = request_args.get("omit_intermediate", "").lower() in {"1", "true", "yes", "on"}
+
+    visible_start = start_index if start_index is not None else 0
+    visible_end = end_index if end_index is not None else len(rows) - 1
+
+    visible_columns = [False] * trip_column_count
+
+    for col in range(trip_column_count):
+        selected_start_time = parse_time_to_minutes(rows[start_index][col + 1]) if start_index is not None else None
+        selected_end_time = parse_time_to_minutes(rows[end_index][col + 1]) if end_index is not None else None
+
+        if start_index is not None and selected_start_time is None:
+            continue
+        if end_index is not None and selected_end_time is None:
+            continue
+
+        departure = selected_start_time if selected_start_time is not None else pick_trip_time(rows, col, visible_start, visible_end, True)
+        arrival = selected_end_time if selected_end_time is not None else pick_trip_time(rows, col, visible_start, visible_end, False)
+
+        if departure is None or arrival is None:
+            continue
+
+        normalized_departure, normalized_arrival = normalize_trip_times(departure, arrival)
+        visible_columns[col] = (
+            normalized_departure >= start_minutes
+            and normalized_arrival <= end_minutes
+            and normalized_arrival >= normalized_departure
+        )
+
+    is_filtering_active = (
+        start_index is not None
+        or end_index is not None
+        or start_minutes > min_time
+        or end_minutes < max_time
+        or omit_intermediate
+    )
+
+    default_column_order = list(range(trip_column_count))
+    if is_filtering_active:
+        def sort_key(col_index):
+            start_cell_time = parse_time_to_minutes(rows[visible_start][col_index + 1])
+            if start_cell_time is None:
+                return (1, 0, col_index)
+            return (0, start_cell_time, col_index)
+
+        column_order = sorted(default_column_order, key=sort_key)
+    else:
+        column_order = default_column_order
+
+    boundary_only = (
+        omit_intermediate
+        and start_index is not None
+        and end_index is not None
+        and start_index < end_index
+    )
+
+    shown_rows = []
+    for row_idx in range(visible_start, visible_end + 1):
+        if boundary_only and row_idx not in (visible_start, visible_end):
+            continue
+        shown_rows.append(row_idx)
+
+    shown_columns = [col for col in column_order if visible_columns[col]]
+
+    filtered_headers = [headers[0]] + [headers[col + 1] for col in shown_columns]
+    filtered_rows = []
+    for row_idx in shown_rows:
+        base_row = rows[row_idx]
+        filtered_rows.append([base_row[0]] + [base_row[col + 1] for col in shown_columns])
+
+    return filtered_headers, filtered_rows
+
+def table_to_csv_string(headers, rows):
+    """Convert table headers/rows back into CSV text."""
+    lines = [",".join(headers)]
+    for row in rows:
+        lines.append(",".join(row))
+    return "\n".join(lines)
 
 def load_routes_by_agency():
     """Load routes for each configured agency."""
@@ -190,6 +357,9 @@ def download():
         route_id = parse_route_ids(route)
 
         csv_string = generate_timetable(agency, trip_date, route_id, direction_id)
+        headers, rows = parse_csv_to_table(csv_string)
+        filtered_headers, filtered_rows = apply_download_filters(headers, rows, request.args)
+        csv_string = table_to_csv_string(filtered_headers, filtered_rows)
         filename = f"{agency}_{route}_{direction}_{date_str.replace('-', '')}.csv"
 
         return send_file(
