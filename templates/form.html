@@ -3,52 +3,52 @@
 {% block title %}GTFS Timetable Viewer - Select Route{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='form.css') }}">
-<div class="form-container">
+  <link rel="stylesheet" href="{{ url_for('static', filename='form.css') }}">
+  <div class="form-container">
     <h2 class="select-route-title">Select a Route</h2>
     <p class="select-route-subtitle">Choose your transit agency, route, direction, and travel date to view the timetable.</p>
     <form method="get" action="/timetable">
+      <div class="form-group">
+        <label for="agency">Transit Agency *</label>
+        <select id="agency" name="agency" required data-routes='{{ routes_by_agency | tojson }}'>
+          <option value="">-- Select an agency --</option>
+          <option value="miway">MiWay</option>
+          <option value="ttc">TTC</option>
+          <option value="gotransit">GO Transit</option>
+        </select>
+      </div>
+      <div class="form-row">
         <div class="form-group">
-            <label for="agency">Transit Agency *</label>
-            <select id="agency" name="agency" required data-routes='{{ routes_by_agency | tojson }}'>
-                <option value="">-- Select an agency --</option>
-                <option value="miway">MiWay</option>
-                <option value="ttc">TTC</option>
-                <option value="gotransit">GO Transit</option>
-            </select>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label for="route">Route *</label>
-                <select id="route" name="route" required>
-                    <option value="">-- Select a route --</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="secondary-route">Secondary Route</label>
-                <select id="secondary-route" name="secondary-route">
-                    <option value="">-</option>
-                </select>
-            </div>
+          <label for="route">Route *</label>
+          <select id="route" name="route" required>
+            <option value="">-- Select a route --</option>
+          </select>
         </div>
         <div class="form-group">
-            <label for="direction">Direction *</label>
-            <select id="direction" name="direction" required>
-                <option value="">-- Select a direction --</option>
-                <option value="0">Direction 0</option>
-                <option value="1">Direction 1</option>
-            </select>
+          <label for="secondary-route">Secondary Route</label>
+          <select id="secondary-route" name="secondary-route">
+            <option value="">-</option>
+          </select>
         </div>
-        <div class="form-group">
-            <label for="date">Date *</label>
-            <input type="date" id="date" name="date" required value="{{ today }}">
-        </div>
+      </div>
+      <div class="form-group">
+        <label for="direction">Direction *</label>
+        <select id="direction" name="direction" required>
+          <option value="">-- Select a direction --</option>
+          <option value="0">Direction 0</option>
+          <option value="1">Direction 1</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="date">Date *</label>
+        <input type="date" id="date" name="date" required value="{{ today }}">
+      </div>
 
-        <button type="submit">View Timetable</button>
+      <button type="submit">View Timetable</button>
     </form>
-</div>
+  </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='form.js') }}"></script>
+  <script src="{{ url_for('static', filename='form.js') }}"></script>
 {% endblock %}

@@ -32,8 +32,8 @@ def get_available_routes(agency_name: str):
     )
     return routes_df.to_dict("records")
 
-def get_direction_labels(agency_name: str, route_id):
-    """Build route-aware direction labels from trip headsigns."""
+def get_direction_headsign_variants(agency_name: str, route_id):
+    """Return ordered headsign variants for each direction id."""
     engine = get_db_engine(agency_name)
     route_ids = normalize_route_ids(route_id)
 
@@ -58,9 +58,18 @@ def get_direction_labels(agency_name: str, route_id):
         params=params
     )
 
+    return {
+        direction_id: labels_df[labels_df["direction_id"] == direction_id]["trip_headsign"].tolist()
+        for direction_id in (0, 1)
+    }
+
+def get_direction_labels(agency_name: str, route_id):
+    """Build route-aware direction labels from trip headsigns."""
+    variants = get_direction_headsign_variants(agency_name, route_id)
+
     labels = {}
     for direction_id in (0, 1):
-        headsigns = labels_df[labels_df["direction_id"] == direction_id]["trip_headsign"].tolist()
+        headsigns = variants[direction_id]
 
         if not headsigns:
             labels[direction_id] = f"Direction {direction_id}"

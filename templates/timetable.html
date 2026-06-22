@@ -1,109 +1,110 @@
 {% extends "base.html" %}
 
-{% block title %}GTFS Timetable - {{ agency }} Route {{ route }}{% endblock %}
+{% block title %}GTFS Timetable - {{ agency }} Route {{ ', '.join(route.split(',')) }}{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='timetable.css') }}">
-<div class="timetable-container">
+  <link rel="stylesheet" href="{{ url_for('static', filename='timetable.css') }}">
+  <div class="timetable-container">
     <div class="timetable-header">
-        <div>
-            <h2 class="route-title">{{ agency }} - Route {{ route }}</h2>
-            <p class="route-subtitle">{{ direction }}</p>
-            <p class="route-subtitle">{{ date }}</p>
-        </div>
-        <div class="actions">
-            <a href="/" class="button-link"><button class="secondary">&LeftArrow; Back to Search</button></a>
-            {% if show_switch_direction %}
-            <a
-                href="/timetable?agency={{ agency_code }}&route={{ route_param }}&direction={{ switch_direction_param }}&date={{ date_param }}"
-                class="button-link"
-            >
-                <button>&rlarr; Switch Direction</button>
-            </a>
-            {% endif %}
+      <div>
+        <h2 class="route-title">{{ agency }} - Route {{ ', '.join(route.split(',')) }}</h2>
+        {% for direction_line in direction.split('\n') %}
+          <p class="route-subtitle">{{ direction_line }}</p>
+        {% endfor %}
+        <p class="route-subtitle">{{ date }}</p>
+      </div>
+      <div class="actions">
+        <a href="/" class="button-link"><button class="secondary">&LeftArrow; Back to Search</button></a>
+        {% if show_switch_direction %}
+          <a
+            href="/timetable?agency={{ agency_code }}&route={{ route_param }}&direction={{ switch_direction_param }}&date={{ date_param }}"
+            class="button-link"
+          >
+            <button>&rlarr; Switch Direction</button>
+          </a>
+        {% endif %}
 
-            <a
-                href="/download?agency={{ agency_code }}&route={{ route_param }}&direction={{ direction_param }}&date={{ date_param }}"
-                id="download-link"
-                class="button-link"
-            >
-                <button>&DownArrowBar; Download CSV</button>
-            </a>
-        </div>
+        <a
+          href="/download?agency={{ agency_code }}&route={{ route_param }}&direction={{ direction_param }}&date={{ date_param }}"
+          id="download-link"
+          class="button-link"
+        >
+          <button>&DownArrowBar; Download CSV</button>
+        </a>
+      </div>
     </div>
     <button id="toggle-filters" type="button">Show Filters</button>
     <div class="timetable-filters is-hidden">
-        <div class="form-row">
-            <div class="form-group">
-                <label for="start-station">Start Location</label>
-                <select id="start-station" name="start-station">
-                    <option value="">-- All stops --</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="end-station">End Location</label>
-                <select id="end-station" name="end-station">
-                    <option value="">-- All stops --</option>
-                </select>
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label for="start-hour">Start Time</label>
-                <div class="time-input-group">
-                    <input type="number" id="start-hour" name="start-hour" min="0" max="47" step="1" value="00" aria-label="Start hour">
-                    <span>:</span>
-                    <input type="number" id="start-minute" name="start-minute" min="0" max="59" step="1" value="00" aria-label="Start minute">
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="end-hour">End Time</label>
-                <div class="time-input-group">
-                    <input type="number" id="end-hour" name="end-hour" min="0" max="47" step="1" value="23" aria-label="End hour">
-                    <span>:</span>
-                    <input type="number" id="end-minute" name="end-minute" min="0" max="59" step="1" value="59" aria-label="End minute">
-                </div>
-            </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="start-station">Start Location</label>
+          <select id="start-station" name="start-station">
+            <option value="">-- All stops --</option>
+          </select>
         </div>
         <div class="form-group">
-            <label class="checkbox-inline" for="omit-intermediate-stops">
-                <input type="checkbox" id="omit-intermediate-stops" name="omit-intermediate-stops">
-                Omit stops between start and end
-            </label>
+          <label for="end-station">End Location</label>
+          <select id="end-station" name="end-station">
+            <option value="">-- All stops --</option>
+          </select>
         </div>
-        <button type="button" id="clear-filters" class="secondary">&times; Clear Filters</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="start-hour">Start Time</label>
+          <div class="time-input-group">
+            <input type="number" id="start-hour" name="start-hour" min="0" max="47" step="1" value="00" aria-label="Start hour">
+            <span>:</span>
+            <input type="number" id="start-minute" name="start-minute" min="0" max="59" step="1" value="00" aria-label="Start minute">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="end-hour">End Time</label>
+          <div class="time-input-group">
+            <input type="number" id="end-hour" name="end-hour" min="0" max="47" step="1" value="23" aria-label="End hour">
+            <span>:</span>
+            <input type="number" id="end-minute" name="end-minute" min="0" max="59" step="1" value="59" aria-label="End minute">
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="checkbox-inline" for="omit-intermediate-stops">
+          <input type="checkbox" id="omit-intermediate-stops" name="omit-intermediate-stops">
+          Omit stops between start and end
+        </label>
+      </div>
+      <button type="button" id="clear-filters" class="secondary">&times; Clear Filters</button>
     </div>
-</div>
+  </div>
 
-{% if headers and rows %}
-<div class="table-container">
-    <table>
+  {% if headers and rows %}
+    <div class="table-container">
+      <table>
         <thead>
-            <tr>
-                {% for header in headers %}
-                <th>{{ header }}</th>
-                {% endfor %}
-            </tr>
+          <tr>
+            {% for header in headers %}
+            <th>{{ header }}</th>
+            {% endfor %}
+          </tr>
         </thead>
         <tbody>
-            {% for row in rows %}
-            <tr>
-                {% for cell in row %}
-                <td {% if cell == '\N{DOWNWARDS ARROW}' or cell == 'N/A' %}class="no-service"{% endif %}>{{ cell }}</td>
-                {% endfor %}
-            </tr>
+          {% for row in rows %}
+          <tr>
+            {% for cell in row %}
+            <td {% if cell == '\N{DOWNWARDS ARROW}' or cell == 'N/A' %}class="no-service"{% endif %}>{{ cell }}</td>
             {% endfor %}
+          </tr>
+          {% endfor %}
         </tbody>
-    </table>
-</div>
-
-{% else %}
-<div class="error-message">
-    No timetable data found. Please try another route or date.
-</div>
-{% endif %}
+      </table>
+    </div>
+  {% else %}
+    <div class="error-message">
+      No timetable data found. Please try another route or date.
+    </div>
+  {% endif %}
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='timetable.js') }}"></script>
+  <script src="{{ url_for('static', filename='timetable.js') }}"></script>
 {% endblock %}

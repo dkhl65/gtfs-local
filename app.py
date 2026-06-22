@@ -5,6 +5,7 @@ from gtfs_data import (
     generate_timetable,
     get_available_routes,
     get_direction_labels,
+    get_direction_headsign_variants,
     get_available_directions,
 )
 
@@ -26,6 +27,11 @@ NO_SERVICE_MARKERS = {"\u2193", "N/A", ""}
 def get_direction_label_for_display(agency, route, direction_id):
     """Get route-aware direction text for rendered timetable pages."""
     route_id = parse_route_ids(route)
+    direction_variants = get_direction_headsign_variants(agency, route_id)
+    headsigns = direction_variants.get(direction_id, [])
+    if headsigns:
+        return "\n".join(headsigns)
+
     direction_labels = get_direction_labels(agency, route_id)
     return direction_labels.get(direction_id, f"Direction {direction_id}")
 

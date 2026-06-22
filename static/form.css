@@ -1,18 +1,18 @@
 .form-container {
-    max-width: 1200px;
-    margin: auto;
+  max-width: 1200px;
+  margin: auto;
 }
 
 .form-container form {
-    max-width: 800px;
+  max-width: 800px;
 }
 
 .select-route-title {
-    margin-top: 0;
-    color: #2c3e50;
+  margin-top: 0;
+  color: #2c3e50;
 }
 
 .select-route-subtitle {
-    color: #666;
-    margin-bottom: 1.5rem;
+  color: #666;
+  margin-bottom: 1.5rem;
 }
