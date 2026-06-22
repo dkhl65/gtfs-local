@@ -4,11 +4,9 @@
 
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='form.css') }}">
-
 <div class="form-container">
     <h2 class="select-route-title">Select a Route</h2>
     <p class="select-route-subtitle">Choose your transit agency, route, direction, and travel date to view the timetable.</p>
-
     <form method="get" action="/timetable">
         <div class="form-group">
             <label for="agency">Transit Agency *</label>
@@ -19,14 +17,20 @@
                 <option value="gotransit">GO Transit</option>
             </select>
         </div>
-
-        <div class="form-group">
-            <label for="route">Route *</label>
-            <select id="route" name="route" required>
-                <option value="">-- Select a route --</option>
-            </select>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="route">Route *</label>
+                <select id="route" name="route" required>
+                    <option value="">-- Select a route --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="secondary-route">Secondary Route</label>
+                <select id="secondary-route" name="secondary-route">
+                    <option value="">-</option>
+                </select>
+            </div>
         </div>
-
         <div class="form-group">
             <label for="direction">Direction *</label>
             <select id="direction" name="direction" required>
@@ -35,7 +39,6 @@
                 <option value="1">Direction 1</option>
             </select>
         </div>
-
         <div class="form-group">
             <label for="date">Date *</label>
             <input type="date" id="date" name="date" required value="{{ today }}">
@@ -44,7 +47,6 @@
         <button type="submit">View Timetable</button>
     </form>
 </div>
-
 {% endblock %}
 
 {% block scripts %}

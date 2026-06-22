@@ -34,6 +34,34 @@ function updateRoutes(routesByAgency) {
     resetDirectionOptions();
 }
 
+function updateSecondaryRouteOptions(routesByAgency) {
+    const agency = document.getElementById("agency").value;
+    const routeSelected = document.getElementById("route").value;
+    const secondaryRouteSelect = document.getElementById("secondary-route");
+
+    secondaryRouteSelect.innerHTML = '<option value="">-</option>';
+
+    if (agency && routesByAgency[agency]) {
+        const agencyRoutes = routesByAgency[agency];
+        const shortNames = agencyRoutes.map(route => String(route.route_short_name ?? route.route_short_names ?? "").trim());
+        const allShortNamesPresent = shortNames.every(shortName => shortName.length > 0);
+        const shortNamesAreUnique = new Set(shortNames).size === shortNames.length;
+        const useShortName = allShortNamesPresent && shortNamesAreUnique;
+
+        agencyRoutes.forEach(route => {
+            if (route.route_id && route.route_id !== routeSelected) {
+                const labelId = useShortName
+                    ? route.route_short_name
+                    : route.route_id;
+                const option = document.createElement("option");
+                option.value = route.route_id;
+                option.textContent = `${labelId} - ${route.route_long_name}`;
+                secondaryRouteSelect.appendChild(option);
+            }
+        });
+    }
+}
+
 async function updateDirectionOptions() {
     const agency = document.getElementById("agency").value;
     const route = document.getElementById("route").value;
@@ -78,6 +106,7 @@ async function updateDirectionOptions() {
 document.addEventListener("DOMContentLoaded", function () {
     const agencySelect = document.getElementById("agency");
     const routeSelect = document.getElementById("route");
+    const secondaryRouteSelect = document.getElementById("secondary-route");
     const routesByAgency = JSON.parse(agencySelect.dataset.routes);
 
     agencySelect.addEventListener("change", function () {
@@ -86,5 +115,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     routeSelect.addEventListener("change", function () {
         updateDirectionOptions();
+        updateSecondaryRouteOptions(routesByAgency);
     });
 });

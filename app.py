@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, send_file, jsonify
 import datetime as dt
 import io
-from output import (
+from gtfs_data import (
     generate_timetable,
     get_available_routes,
     get_direction_labels,
@@ -279,6 +279,7 @@ def timetable():
     """Display timetable based on query parameters."""
     agency = request.args.get("agency", "").lower()
     route = request.args.get("route", "")
+    secondary_route = request.args.get("secondary-route", "")
     direction = request.args.get("direction", "")
     date_str = request.args.get("date", "")
 
@@ -289,6 +290,8 @@ def timetable():
         trip_date = date_str.replace("-", "")
         direction_id = int(direction)
 
+        if secondary_route:
+            route += f",{secondary_route}"
         route_id = parse_route_ids(route)
         available_directions = get_available_directions(agency, route_id)
         if not available_directions:

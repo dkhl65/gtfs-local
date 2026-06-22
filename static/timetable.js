@@ -269,8 +269,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 		const columnOrder = isFilteringActive
 			? defaultColumnOrder.slice().sort((leftIndex, rightIndex) => {
-				const leftTime = rowModels[visibleStart].times[leftIndex];
-				const rightTime = rowModels[visibleStart].times[rightIndex];
+				const leftTime = pickTripTime(leftIndex, visibleStart, visibleEnd, true);
+				const rightTime = pickTripTime(rightIndex, visibleStart, visibleEnd, true);
 
 				if (leftTime === null && rightTime === null) {
 					return leftIndex - rightIndex;
