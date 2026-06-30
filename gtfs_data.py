@@ -3,6 +3,8 @@ import datetime as dt
 import pandas as pd
 import sys
 from pathlib import Path
+from collections import defaultdict, deque
+from functools import cmp_to_key
 
 def normalize_route_ids(route_id):
     """Normalize route input to a list of route ids."""
@@ -110,6 +112,104 @@ def table_exists(engine, table_name):
     inspector = inspect(engine)
     return table_name in inspector.get_table_names()
 
+def sort_trip_ids_by_row_times(trip_ids, stops, sequence):
+    """Order trip ids so times progress left-to-right across stop rows when possible."""
+
+    def to_minutes(hhmm):
+        hour, minute = hhmm.split(":")
+        return int(hour) * 60 + int(minute)
+
+    if len(trip_ids) <= 1:
+        return trip_ids
+
+    graph = defaultdict(set)
+    indegree = {tid: 0 for tid in trip_ids}
+    first_seen_minutes = {}
+    original_index = {tid: i for i, tid in enumerate(trip_ids)}
+    pairwise_wins = defaultdict(lambda: defaultdict(int))
+
+    for stop in sequence:
+        timed = []
+        for tid in trip_ids:
+            value = stops[stop].get(tid)
+            if value:
+                minutes = to_minutes(value)
+                timed.append((minutes, tid))
+                if tid not in first_seen_minutes:
+                    first_seen_minutes[tid] = minutes
+
+        timed.sort()
+        for i in range(len(timed)):
+            for j in range(i + 1, len(timed)):
+                left_minutes, left_tid = timed[i]
+                right_minutes, right_tid = timed[j]
+                if left_minutes < right_minutes:
+                    pairwise_wins[left_tid][right_tid] += 1
+
+        for i in range(len(timed) - 1):
+            left_tid = timed[i][1]
+            right_tid = timed[i + 1][1]
+            if right_tid not in graph[left_tid]:
+                graph[left_tid].add(right_tid)
+                indegree[right_tid] += 1
+
+    queue = deque(
+        sorted(
+            [tid for tid in trip_ids if indegree[tid] == 0],
+            key=lambda tid: (first_seen_minutes.get(tid, float("inf")), original_index[tid])
+        )
+    )
+    ordered = []
+
+    while queue:
+        tid = queue.popleft()
+        ordered.append(tid)
+        released = []
+        for nxt in graph[tid]:
+            indegree[nxt] -= 1
+            if indegree[nxt] == 0:
+                released.append(nxt)
+        for nxt in sorted(
+            released,
+            key=lambda t: (first_seen_minutes.get(t, float("inf")), original_index[t])
+        ):
+            queue.append(nxt)
+
+    if len(ordered) == len(trip_ids):
+        return ordered
+
+    remaining = [tid for tid in trip_ids if tid not in ordered]
+    wins_out = {tid: 0 for tid in trip_ids}
+    wins_in = {tid: 0 for tid in trip_ids}
+    for left_tid, targets in pairwise_wins.items():
+        for right_tid, count in targets.items():
+            wins_out[left_tid] += count
+            wins_in[right_tid] += count
+
+    def compare_trip_order(left_tid, right_tid):
+        left_over_right = pairwise_wins[left_tid].get(right_tid, 0)
+        right_over_left = pairwise_wins[right_tid].get(left_tid, 0)
+        if left_over_right != right_over_left:
+            return -1 if left_over_right > right_over_left else 1
+
+        left_net = wins_out[left_tid] - wins_in[left_tid]
+        right_net = wins_out[right_tid] - wins_in[right_tid]
+        if left_net != right_net:
+            return -1 if left_net > right_net else 1
+
+        left_first = first_seen_minutes.get(left_tid, float("inf"))
+        right_first = first_seen_minutes.get(right_tid, float("inf"))
+        if left_first != right_first:
+            return -1 if left_first < right_first else 1
+
+        if original_index[left_tid] != original_index[right_tid]:
+            return -1 if original_index[left_tid] < original_index[right_tid] else 1
+
+        return 0
+
+    ordered.extend(sorted(remaining, key=cmp_to_key(compare_trip_order)))
+    return ordered
+
 def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id: int):
     """Generate CSV-format timetable for a route on a specific date."""
     engine = get_db_engine(agency_name)
@@ -187,21 +287,9 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
 
     stops = {}
     sequence = []
-    csv_header = "Stop"
     for trip in trips:
         inserter = []
         stop_occurrences = {}
-        route_split_name = trip["trip_headsign"][0].split(" - ", 1)
-        if len(route_split_name) >= 2 and route_split_name[0].strip() in ("North", "East", "West", "South"):
-            route_full_name = route_split_name[1].strip()
-        else:
-            route_full_name = trip["trip_headsign"][0].strip()
-        direction_index = route_full_name.find(" ") + 1
-        if route_full_name[direction_index:direction_index + 2] in ("N ", "E ", "W ", "S "):
-            route_number = route_full_name[:direction_index + 1]
-        else:
-            route_number = route_full_name[:direction_index - 1]
-        csv_header += f",{route_number}"
         for _, row in trip.iterrows():
             stop_base = f"{row['stop_id']} {row['stop_name']}"
             stop_occurrences[stop_base] = stop_occurrences.get(stop_base, 0) + 1
@@ -221,12 +309,29 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
                 stops[stop] = {row["trip_id"]: row["arrival_time"][:5]}
                 inserter.append(stop)
         sequence = sequence + inserter
+    ordered_trip_ids = sort_trip_ids_by_row_times(trip_ids, stops, sequence)
+
+    csv_header = "Stop"
+    for trip_id in ordered_trip_ids:
+        trip = trips_by_id[trip_id]
+        route_split_name = trip["trip_headsign"][0].split(" - ", 1)
+        if len(route_split_name) >= 2 and route_split_name[0].strip() in ("North", "East", "West", "South"):
+            route_full_name = route_split_name[1].strip()
+        else:
+            route_full_name = trip["trip_headsign"][0].strip()
+        direction_index = route_full_name.find(" ") + 1
+        if route_full_name[direction_index:direction_index + 2] in ("N ", "E ", "W ", "S "):
+            route_number = route_full_name[:direction_index + 1]
+        else:
+            route_number = route_full_name[:direction_index - 1]
+        csv_header += f",{route_number}"
+
     csv_string = csv_header + "\n"
 
     for stop in sequence:
         _, stop_label = stop.split("|", 1)
         csv_row = stop_label[stop_label.find(" ")+1:]
-        for trip_id in trip_ids:
+        for trip_id in ordered_trip_ids:
             if trip_id in stops[stop]:
                 csv_row += f",{stops[stop][trip_id]}"
             else:
