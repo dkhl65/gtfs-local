@@ -17,15 +17,14 @@
         <a href="/" class="button-link"><button class="secondary">&LeftArrow; Back to Search</button></a>
         {% if show_switch_direction %}
           <a
-            href="/timetable?agency={{ agency_code }}&route={{ route_param }}&direction={{ switch_direction_param }}&date={{ date_param }}"
+            href="{{ url_for('timetable', agency=agency_code, route=route_param, direction=switch_direction_param, date=date_param) }}"
             class="button-link"
           >
             <button>&rlarr; Switch Direction</button>
           </a>
         {% endif %}
-
         <a
-          href="/download?agency={{ agency_code }}&route={{ route_param }}&direction={{ direction_param }}&date={{ date_param }}"
+          href="{{ url_for('download', agency=agency_code, route=route_param, direction=direction_param, date=date_param) }}"
           id="download-link"
           class="button-link"
         >

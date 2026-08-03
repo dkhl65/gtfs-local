@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, send_file, jsonify
 import datetime as dt
-import io
+from io import BytesIO, StringIO
+import csv
 from gtfs_data import (
     generate_timetable,
     get_available_routes,
@@ -22,7 +23,7 @@ DEFAULT_DIRECTIONS = {
     1: "Direction 1"
 }
 
-NO_SERVICE_MARKERS = {"\u2193", "N/A", ""}
+NO_SERVICE_MARKERS = {"\N{DOWNWARDS ARROW}", "N/A", ""}
 
 def get_direction_label_for_display(agency, route, direction_id):
     """Get route-aware direction text for rendered timetable pages."""
@@ -44,16 +45,15 @@ def parse_route_ids(route_value):
 
 def parse_csv_to_table(csv_string):
     """Convert CSV string to table data (list of dicts)."""
-    lines = csv_string.strip().split("\n")
-    if not lines:
+    csv_stream = StringIO(csv_string)
+    csv_reader = csv.reader(csv_stream)
+    rows = list(csv_reader)
+    if not rows:
         return [], []
 
-    headers = lines[0].split(",")
-    rows = []
-    for line in lines[1:]:
-        rows.append(line.split(","))
-
-    return headers, rows
+    headers = rows[0]
+    data_rows = rows[1:]
+    return headers, data_rows
 
 def parse_time_to_minutes(value):
     """Parse HH:MM (including >24h) to minutes from midnight."""
@@ -181,10 +181,10 @@ def apply_download_filters(headers, rows, request_args):
     default_column_order = list(range(trip_column_count))
     if is_filtering_active:
         def sort_key(col_index):
-            start_cell_time = parse_time_to_minutes(rows[visible_start][col_index + 1])
-            if start_cell_time is None:
+            start_time = pick_trip_time(rows, col_index, visible_start, visible_end, True)
+            if start_time is None:
                 return (1, 0, col_index)
-            return (0, start_cell_time, col_index)
+            return (0, start_time, col_index)
 
         column_order = sorted(default_column_order, key=sort_key)
     else:
@@ -215,10 +215,12 @@ def apply_download_filters(headers, rows, request_args):
 
 def table_to_csv_string(headers, rows):
     """Convert table headers/rows back into CSV text."""
-    lines = [",".join(headers)]
+    csv_stream = StringIO()
+    csv_writer = csv.writer(csv_stream)
+    csv_writer.writerow(headers)
     for row in rows:
-        lines.append(",".join(row))
-    return "\n".join(lines)
+        csv_writer.writerow(row)
+    return csv_stream.getvalue()
 
 def load_routes_by_agency():
     """Load routes for each configured agency."""
@@ -284,6 +286,8 @@ def direction_options():
 def timetable():
     """Display timetable based on query parameters."""
     agency = request.args.get("agency", "").lower()
+    if agency not in AGENCIES:
+        return render_form(error="Unknown transit agency", status_code=400)
     route = request.args.get("route", "")
     secondary_route = request.args.get("secondary-route", "")
     direction = request.args.get("direction", "")
@@ -372,7 +376,7 @@ def download():
         filename = f"{agency}_{route}_{direction}_{date_str.replace('-', '')}.csv"
 
         return send_file(
-            io.BytesIO(csv_string.encode()),
+            BytesIO(csv_string.encode()),
             mimetype="text/csv",
             as_attachment=True,
             download_name=filename

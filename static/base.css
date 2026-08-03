@@ -34,9 +34,8 @@ header h1 {
   color: #721c24;
   padding: 1rem;
   border-radius: 4px;
-  margin-bottom: 1rem;
+  margin: 1rem auto 1rem auto;
   max-width: 1200px;
-  margin: auto;
 }
 
 .success-message {

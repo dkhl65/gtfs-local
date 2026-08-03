@@ -2,6 +2,8 @@ from sqlalchemy import create_engine, inspect
 import datetime as dt
 import pandas as pd
 import sys
+import csv
+from io import StringIO
 from pathlib import Path
 from collections import defaultdict, deque
 from functools import cmp_to_key
@@ -13,7 +15,12 @@ def normalize_route_ids(route_id):
 def get_db_engine(agency_name: str):
     """Get SQLAlchemy engine for a specific transit agency."""
     agency_name = agency_name.lower()
-    db_path = Path(__file__).parent / "gtfs_data" / agency_name / f"{agency_name}.db"
+    base_dir = (Path(__file__).parent / "gtfs_data").resolve()
+    if "/" in agency_name or "\\" in agency_name:
+        raise ValueError("Invalid agency name")
+    db_path = (base_dir / agency_name / f"{agency_name}.db").resolve()
+    if base_dir not in db_path.parents:
+        raise ValueError("Invalid agency name")
     if not db_path.exists():
         raise FileNotFoundError(f"Database not found for agency '{agency_name}' at {db_path}")
     return create_engine(f"sqlite:///{db_path}")
@@ -215,25 +222,29 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
     engine = get_db_engine(agency_name)
 
     service_id_df1 = pd.DataFrame(columns=["service_id"])
-    if table_exists(engine, "calendar"):
+    no_service_id_df = pd.DataFrame(columns=["service_id"])
+    service_id_df2 = pd.DataFrame(columns=["service_id"])
+    if table_exists(engine, "calendar_dates"):
         no_service_id_df = pd.read_sql_query(
             "SELECT service_id FROM calendar_dates WHERE exception_type = 2 AND date = :date",
             con=engine,
             params={"date": trip_date}
         )
-        if trip_date not in no_service_id_df["service_id"].values:
+        service_id_df2 = pd.read_sql_query(
+            "SELECT service_id FROM calendar_dates WHERE date = :date AND exception_type = 1",
+            con=engine,
+            params={"date": trip_date}
+        )
+        if table_exists(engine, "calendar") and no_service_id_df.empty:
             day_of_week = dt.datetime.strptime(trip_date, "%Y%m%d").strftime("%A").lower()
             service_id_df1 = pd.read_sql_query(
                 f"SELECT service_id FROM calendar WHERE {day_of_week} = 1 AND start_date <= :date AND end_date >= :date",
                 con=engine,
                 params={"date": trip_date}
             )
-    service_id_df2 = pd.read_sql_query(
-        "SELECT service_id FROM calendar_dates WHERE date = :date AND exception_type = 1",
-        con=engine,
-        params={"date": trip_date}
-    )
     service_ids = list(service_id_df1["service_id"]) + list(service_id_df2["service_id"])
+    if not service_ids:
+        return ""
 
     route_ids = normalize_route_ids(route_id)
     route_placeholders = ",".join([f":route_id_{i}" for i in range(len(route_ids))])
@@ -259,6 +270,8 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
         params=params_trip_ids
     )
     trip_ids = list(trip_ids_df["trip_id"])
+    if not trip_ids:
+        return ""
 
     trip_id_placeholders = ",".join([f":trip_id_{i}" for i in range(len(trip_ids))])
     trip_id_params = {f"trip_id_{i}": tid for i, tid in enumerate(trip_ids)}
@@ -311,7 +324,7 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
         sequence = sequence + inserter
     ordered_trip_ids = sort_trip_ids_by_row_times(trip_ids, stops, sequence)
 
-    csv_header = "Stop"
+    csv_header = ["Stop"]
     for trip_id in ordered_trip_ids:
         trip = trips_by_id[trip_id]
         route_split_name = trip["trip_headsign"][0].split(" - ", 1)
@@ -324,21 +337,23 @@ def generate_timetable(agency_name: str, trip_date: str, route_id, direction_id:
             route_number = route_full_name[:direction_index + 1]
         else:
             route_number = route_full_name[:direction_index - 1]
-        csv_header += f",{route_number}"
+        csv_header.append(route_number)
 
-    csv_string = csv_header + "\n"
+    csv_stream = StringIO()
+    csv_writer = csv.writer(csv_stream)
+    csv_writer.writerow(csv_header)
 
     for stop in sequence:
         _, stop_label = stop.split("|", 1)
-        csv_row = stop_label[stop_label.find(" ")+1:]
+        csv_row = [stop_label[stop_label.find(" ")+1:]]
         for trip_id in ordered_trip_ids:
             if trip_id in stops[stop]:
-                csv_row += f",{stops[stop][trip_id]}"
+                csv_row.append(stops[stop][trip_id])
             else:
-                csv_row += ",\N{DOWNWARDS ARROW}"
-        csv_string += csv_row + "\n"
+                csv_row.append("\N{DOWNWARDS ARROW}")
+        csv_writer.writerow(csv_row)
 
-    return csv_string
+    return csv_stream.getvalue()
 
 if __name__ == "__main__":
     agency_name = "miway"
