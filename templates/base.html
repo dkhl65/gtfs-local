@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GTFS Timetable Viewer{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
+  </head>
+  <body>
+    <header>
+      <h1>GTFS Transit Timetable Viewer</h1>
+    </header>
+
+    <div class="container">
+      {% if error %}
+        <div class="error-message">
+          <strong>Error:</strong> {{ error }}
+        </div>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </div>
+
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

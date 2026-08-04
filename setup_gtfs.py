@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 from pathlib import Path
 from typing import Optional
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 AGENCIES = {
     "miway": "https://www.miapp.ca/GTFS/google_transit.zip",
@@ -14,6 +14,49 @@ AGENCIES = {
 }
 GTFS_DATA_DIR = "gtfs_data"
 DOWNLOAD_DIR = "downloads"
+
+def create_query_indexes(engine, table_names):
+    """Create query indexes for common timetable lookups."""
+    table_set = set(table_names)
+    statements = []
+
+    if "trips" in table_set:
+        statements.append(
+            """
+            CREATE INDEX IF NOT EXISTS idx_trips_route_service_dir_trip
+            ON trips(route_id, service_id, direction_id, trip_id)
+            """
+        )
+    if "stop_times" in table_set:
+        statements.append(
+            """
+            CREATE INDEX IF NOT EXISTS idx_stop_times_trip_seq_arr
+            ON stop_times(trip_id, stop_sequence, arrival_time)
+            """
+        )
+    if "calendar_dates" in table_set:
+        statements.append(
+            """
+            CREATE INDEX IF NOT EXISTS idx_calendar_dates_date_exception_service
+            ON calendar_dates(date, exception_type, service_id)
+            """
+        )
+    if "stops" in table_set:
+        statements.append(
+            """
+            CREATE INDEX IF NOT EXISTS idx_stops_stop_id
+            ON stops(stop_id)
+            """
+        )
+
+    if not statements:
+        return 0
+
+    with engine.begin() as connection:
+        for statement in statements:
+            connection.execute(text(statement))
+
+    return len(statements)
 
 def setup_directories():
     base = Path(GTFS_DATA_DIR)
@@ -82,7 +125,11 @@ def build_sqlite(agency_name: str, extract_dir: Path) -> Optional[Path]:
         pd.read_csv(txt_file).to_sql(txt_file.stem, con=engine, index=False)
         table_count += 1
 
+    indexed = create_query_indexes(engine, [txt_file.stem for txt_file in txt_files])
+
     print(f"    \N{CHECK MARK} Created {table_count} table(s) in {db_path}")
+    if indexed:
+        print(f"    \N{CHECK MARK} Created {indexed} index(es) for query performance")
     return db_path
 
 def cleanup_zips(download_dir: Path):

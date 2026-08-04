@@ -1,0 +1,164 @@
+.timetable-container {
+  max-width: 1200px;
+  margin: auto;
+}
+
+.route-title {
+  margin: 0 0 0.5rem 0;
+}
+
+.route-subtitle {
+  color: #666;
+  margin: 0;
+}
+
+.button-link {
+  text-decoration: none;
+}
+
+.new-search-div {
+  margin-top: 2rem;
+  justify-content: center;
+}
+
+.table-container {
+  display: block;
+}
+
+.timetable-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.timetable-info {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-bottom: 1rem;
+}
+
+.timetable-info h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+.timetable-info p {
+  color: #666;
+  margin: 0.25rem 0;
+}
+
+table {
+  border-collapse: collapse;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border-radius: 4px;
+  max-height: 100vh;
+  max-width: 100vw;
+  overflow: auto;
+  margin: 1rem auto;
+}
+
+thead {
+  background-color: #34495e;
+  color: white;
+}
+
+th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #2c3e50;
+}
+
+td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #ecf0f1;
+  min-width: 85px;
+}
+
+tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.no-service {
+  color: #e74c3c;
+  font-weight: 500;
+}
+
+.actions {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.timetable-filters {
+  margin-top: 1rem;
+}
+
+.timetable-filters.is-hidden {
+  display: none;
+}
+
+.time-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.time-input-group input {
+  width: 5.25rem;
+}
+
+.time-input-group span {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.filter-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.checkbox-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0;
+}
+
+.checkbox-inline input {
+  width: auto;
+  padding: 0;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+th:first-child, td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 9;
+  background-color: #34495e;
+  color: white;
+}
+
+tr:hover td:first-child {
+  background-color: #2c3e50;
+}
+
+th:first-child {
+  z-index: 11;
+}
