@@ -250,6 +250,11 @@ def index():
     """Show the form to select agency, route, direction, and date."""
     return render_form()
 
+@app.route("/transfers")
+def transfers():
+    """Show the transfers page."""
+    return render_template("transfers.html")
+
 @app.route("/direction-options")
 def direction_options():
     """Return route-aware direction labels for the selected agency and route(s)."""

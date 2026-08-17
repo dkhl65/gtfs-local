@@ -8,7 +8,23 @@
   </head>
   <body>
     <header>
-      <h1>GTFS Transit Timetable Viewer</h1>
+      <div class="header-content">
+        <h1>GTFS Timetable Viewer</h1>
+        <nav>
+            <a
+              class="{% if request.endpoint == 'index' or request.endpoint == 'timetable' %}active{% endif %}"
+              href="{{ url_for('index') }}"
+              >
+              Timetable
+            </a>
+            <a
+              class="{% if request.endpoint == 'transfers' %}active{% endif %}"
+              href="{{ url_for('transfers') }}"
+              >
+              Transfers
+            </a>
+        </nav>
+      </div>
     </header>
 
     <div class="container">

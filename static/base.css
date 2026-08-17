@@ -17,10 +17,35 @@ header {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.header-content {
+  max-width: 1200px;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
 header h1 {
   font-size: 1.8rem;
-  margin: auto;
-  max-width: 1200px;
+}
+
+nav {
+  display: flex;
+  gap: 1rem;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+}
+
+nav a.active {
+  background-color: #3498db;
+  text-decoration: none;
 }
 
 .container {
@@ -104,6 +129,11 @@ button.secondary:hover {
 }
 
 @media (max-width: 768px) {
+  .header-content {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
   }
