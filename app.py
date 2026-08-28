@@ -253,7 +253,13 @@ def index():
 @app.route("/transfers")
 def transfers():
     """Show the transfers page."""
-    return render_template("transfers.html")
+    response = render_template(
+        "transfers.html",
+        agencies=AGENCIES,
+        routes_by_agency=load_routes_by_agency(),
+        today=dt.datetime.now().strftime("%Y-%m-%d")
+    )
+    return response
 
 @app.route("/direction-options")
 def direction_options():

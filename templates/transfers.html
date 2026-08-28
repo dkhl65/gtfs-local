@@ -2,4 +2,100 @@
 
 {% block title %}GTFS Transfers{% endblock %}
 
-{% block content %}{% endblock %}
+{% block content %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='form.css') }}">
+  <div class="form-container">
+    <h2 class="select-route-title">Select Connecting Routes</h2>
+    <p class="select-route-subtitle">Choose routes to transfer between.</p>
+    <form>
+      <div class="form-group">
+        <label for="date">Date *</label>
+        <input type="date" id="date" name="date" required value="{{ today }}">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="min-transfer-time">Minimum Transfer Time (minutes)</label>
+          <input type="number" id="min-transfer-time" name="min-transfer-time" min="0" max="59" step="1" value="03">
+        </div>
+        <div class="form-group">
+          <label for="max-transfer-time">Maximum Transfer Time (minutes)</label>
+          <input type="number" id="max-transfer-time" name="max-transfer-time" min="0" step="1" value="20">
+        </div>
+      </div>
+      <h2 class="select-route-title">Starting Route</h2>
+      <div class="form-group">
+        <label for="agency0">Transit Agency *</label>
+        <select id="agency0" name="agency0" required data-routes='{{ routes_by_agency | tojson }}'>
+          <option value="">-- Select an agency --</option>
+            {% for code, name in agencies.items() %}
+              <option value="{{ code }}">{{ name }}</option>
+            {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="route0">Route *</label>
+        <select id="route0" name="route0" required>
+          <option value="">-- Select a route --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="direction0">Direction *</label>
+        <select id="direction0" name="direction0" required>
+          <option value="">-- Select a direction --</option>
+          <option value="0">Direction 0</option>
+          <option value="1">Direction 1</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="stop0a">Starting at *</label>
+        <select id="stop0a" name="stop0a" required>
+          <option value="">-- Select a stop --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="stop0b">Ending at *</label>
+        <select id="stop0b" name="stop0b" required>
+          <option value="">-- Select a stop --</option>
+        </select>
+      </div>
+      <h2 class="select-route-title">Transfer 1</h2>
+      <div class="form-group">
+        <label for="agency1">Transit Agency *</label>
+        <select id="agency1" name="agency1" required data-routes='{{ routes_by_agency | tojson }}'>
+          <option value="">-- Select an agency --</option>
+            {% for code, name in agencies.items() %}
+              <option value="{{ code }}">{{ name }}</option>
+            {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="route1">Route *</label>
+        <select id="route1" name="route1" required>
+          <option value="">-- Select a route --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="direction1">Direction *</label>
+        <select id="direction1" name="direction1" required>
+          <option value="">-- Select a direction --</option>
+          <option value="0">Direction 0</option>
+          <option value="1">Direction 1</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="stop1a">Starting at *</label>
+        <select id="stop1a" name="stop1a" required>
+          <option value="">-- Select a stop --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="stop1b">Ending at</label>
+        <select id="stop1b" name="stop1b">
+          <option value="">-- Select a stop --</option>
+        </select>
+      </div>
+      <button id="add-transfer" class="secondary">Add Transfer</button>
+      <button type="submit">View Transfers Times</button>
+    </form>
+  </div>
+{% endblock %}
