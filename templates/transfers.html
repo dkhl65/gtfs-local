@@ -58,44 +58,53 @@
           <option value="">-- Select a stop --</option>
         </select>
       </div>
-      <h2 class="select-route-title">Transfer 1</h2>
-      <div class="form-group">
-        <label for="agency1">Transit Agency *</label>
-        <select id="agency1" name="agency1" required data-routes='{{ routes_by_agency | tojson }}'>
-          <option value="">-- Select an agency --</option>
+      <div id="transfers">
+        <section class="transfer" data-transfer>
+          <h2 class="select-route-title" data-transfer-title>Transfer 1</h2>
+          <div class="form-group">
+            <label for="agency1">Transit Agency *</label>
+            <select id="agency1" name="agency1" required data-routes='{{ routes_by_agency | tojson }}'>
+            <option value="">-- Select an agency --</option>
             {% for code, name in agencies.items() %}
               <option value="{{ code }}">{{ name }}</option>
             {% endfor %}
-        </select>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="route1">Route *</label>
+            <select id="route1" name="route1" required>
+              <option value="">-- Select a route --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="direction1">Direction *</label>
+            <select id="direction1" name="direction1" required>
+              <option value="">-- Select a direction --</option>
+              <option value="0">Direction 0</option>
+              <option value="1">Direction 1</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="stop1a">Starting at *</label>
+            <select id="stop1a" name="stop1a" required>
+              <option value="">-- Select a stop --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="stop1b">Ending at</label>
+            <select id="stop1b" name="stop1b">
+              <option value="">-- Select a stop --</option>
+            </select>
+          </div>
+        </section>
       </div>
-      <div class="form-group">
-        <label for="route1">Route *</label>
-        <select id="route1" name="route1" required>
-          <option value="">-- Select a route --</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="direction1">Direction *</label>
-        <select id="direction1" name="direction1" required>
-          <option value="">-- Select a direction --</option>
-          <option value="0">Direction 0</option>
-          <option value="1">Direction 1</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="stop1a">Starting at *</label>
-        <select id="stop1a" name="stop1a" required>
-          <option value="">-- Select a stop --</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="stop1b">Ending at</label>
-        <select id="stop1b" name="stop1b">
-          <option value="">-- Select a stop --</option>
-        </select>
-      </div>
-      <button id="add-transfer" class="secondary">Add Transfer</button>
+      <button type="button" id="add-transfer" class="secondary">Add Transfer</button>
+      <button type="button" id="remove-transfer" class="secondary" hidden>Remove Transfer</button>
       <button type="submit">View Transfers Times</button>
     </form>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='transfers.js') }}"></script>
 {% endblock %}
