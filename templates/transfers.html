@@ -65,9 +65,9 @@
             <label for="agency1">Transit Agency *</label>
             <select id="agency1" name="agency1" required data-routes='{{ routes_by_agency | tojson }}'>
             <option value="">-- Select an agency --</option>
-            {% for code, name in agencies.items() %}
-              <option value="{{ code }}">{{ name }}</option>
-            {% endfor %}
+              {% for code, name in agencies.items() %}
+                <option value="{{ code }}">{{ name }}</option>
+              {% endfor %}
             </select>
           </div>
           <div class="form-group">
@@ -106,5 +106,6 @@
 {% endblock %}
 
 {% block scripts %}
+  <script src="{{ url_for('static', filename='form.js') }}"></script>
   <script src="{{ url_for('static', filename='transfers.js') }}"></script>
 {% endblock %}

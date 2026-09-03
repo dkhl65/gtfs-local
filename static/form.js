@@ -1,5 +1,5 @@
-function resetDirectionOptions() {
-  const directionSelect = document.getElementById("direction");
+function resetDirectionOptions(elementIndex) {
+  const directionSelect = document.getElementById("direction" + elementIndex);
   directionSelect.innerHTML = [
     '<option value="">-- Select a direction --</option>',
     '<option value="0">Direction 0</option>',
@@ -7,9 +7,9 @@ function resetDirectionOptions() {
   ].join("");
 }
 
-function updateRoutes(routesByAgency) {
-  const agency = document.getElementById("agency").value;
-  const routeSelect = document.getElementById("route");
+function updateRoutes(routesByAgency, elementIndex) {
+  const agency = document.getElementById("agency" + elementIndex).value;
+  const routeSelect = document.getElementById("route" + elementIndex);
 
   routeSelect.innerHTML = '<option value="">-- Select a route --</option>';
 
@@ -31,7 +31,7 @@ function updateRoutes(routesByAgency) {
     });
   }
 
-  resetDirectionOptions();
+  resetDirectionOptions(elementIndex);
 }
 
 function updateSecondaryRouteOptions(routesByAgency) {
@@ -62,13 +62,13 @@ function updateSecondaryRouteOptions(routesByAgency) {
   }
 }
 
-async function updateDirectionOptions() {
-  const agency = document.getElementById("agency").value;
-  const route = document.getElementById("route").value;
-  const directionSelect = document.getElementById("direction");
+async function updateDirectionOptions(elementIndex) {
+  const agency = document.getElementById("agency" + elementIndex).value;
+  const route = document.getElementById("route" + elementIndex).value;
+  const directionSelect = document.getElementById("direction" + elementIndex);
 
   if (!agency || !route) {
-    resetDirectionOptions();
+    resetDirectionOptions(elementIndex);
     return;
   }
 
@@ -78,7 +78,7 @@ async function updateDirectionOptions() {
     const options = Array.isArray(data.options) ? data.options : [];
 
     if (options.length === 0) {
-      resetDirectionOptions();
+      resetDirectionOptions(elementIndex);
       return;
     }
 
@@ -99,22 +99,6 @@ async function updateDirectionOptions() {
       directionSelect.value = options[0].value;
     }
   } catch (_error) {
-    resetDirectionOptions();
+    resetDirectionOptions(elementIndex);
   }
 }
-
-document.addEventListener("DOMContentLoaded", function () {
-  const agencySelect = document.getElementById("agency");
-  const routeSelect = document.getElementById("route");
-  const secondaryRouteSelect = document.getElementById("secondary-route");
-  const routesByAgency = JSON.parse(agencySelect.dataset.routes);
-
-  agencySelect.addEventListener("change", function () {
-    updateRoutes(routesByAgency);
-  });
-
-  routeSelect.addEventListener("change", function () {
-    updateDirectionOptions();
-    updateSecondaryRouteOptions(routesByAgency);
-  });
-});

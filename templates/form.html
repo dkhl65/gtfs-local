@@ -51,4 +51,20 @@
 
 {% block scripts %}
   <script src="{{ url_for('static', filename='form.js') }}"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const agencySelect = document.getElementById("agency");
+      const routeSelect = document.getElementById("route");
+      const routesByAgency = JSON.parse(agencySelect.dataset.routes);
+
+      agencySelect.addEventListener("change", function () {
+        updateRoutes(routesByAgency, "");
+      });
+
+      routeSelect.addEventListener("change", function () {
+        updateDirectionOptions("");
+        updateSecondaryRouteOptions(routesByAgency, "");
+      });
+    });
+  </script>
 {% endblock %}
