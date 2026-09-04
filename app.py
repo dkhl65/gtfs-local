@@ -293,6 +293,33 @@ def direction_options():
             {"value": "1", "label": DEFAULT_DIRECTIONS[1]}
         ]})
 
+@app.route("/stop-options")
+def stop_options():
+    """Return stops in the same order as the selected route timetable."""
+    agency = request.args.get("agency", "").lower()
+    route = request.args.get("route", "")
+    direction = request.args.get("direction", "")
+    date_str = request.args.get("date", "")
+
+    if agency not in AGENCIES or not route or not direction or not date_str:
+        return jsonify({"options": []})
+
+    try:
+        csv_string = generate_timetable(
+            agency,
+            date_str.replace("-", ""),
+            parse_route_ids(route),
+            int(direction)
+        )
+        _, rows = parse_csv_to_table(csv_string)
+        return jsonify({"options": [
+            {"value": str(index), "label": row[0]}
+            for index, row in enumerate(rows)
+            if row
+        ]})
+    except Exception:
+        return jsonify({"options": []})
+
 @app.route("/timetable")
 def timetable():
     """Display timetable based on query parameters."""
