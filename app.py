@@ -15,7 +15,8 @@ app = Flask(__name__)
 AGENCIES = {
     "miway": "MiWay",
     "ttc": "TTC",
-    "gotransit": "GO Transit"
+    "gotransit": "GO Transit",
+    "yrt": "York Region Transit"
 }
 
 DEFAULT_DIRECTIONS = {

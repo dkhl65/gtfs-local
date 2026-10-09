@@ -11,6 +11,7 @@ AGENCIES = {
     "miway": "https://www.miapp.ca/GTFS/google_transit.zip",
     "ttc": "https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/b811ead4-6eaf-4adb-8408-d389fb5a069c/resource/c920e221-7a1c-488b-8c5b-6d8cd4e85eaf/download/Complete%20GTFS.zip",
     "gotransit": "https://assets.metrolinx.com/raw/upload/Documents/Metrolinx/Open%20Data/GO-GTFS.zip",
+    "yrt": "https://www.yrt.ca/google/google_transit.zip"
 }
 GTFS_DATA_DIR = "gtfs_data"
 DOWNLOAD_DIR = "downloads"
